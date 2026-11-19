@@ -6,7 +6,8 @@
 # the previous heartbeat of its project, capped at the heartbeat timeout.
 # Human time runs that rule over human-credited heartbeats (human ones, plus
 # agent ones up to 2 minutes after the latest human one, per project);
-# agent-running time is the rest, so human + agent = raw for every session, project and total.
+# agent-running time is the rest, so human + agent = raw for every session,
+# project and total.
 class ProjectJustification
   RULE_SET = "v0".freeze
   REPO_URL = "https://github.com/evanxdsouza/codename-strgl".freeze
