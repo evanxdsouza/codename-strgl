@@ -34,7 +34,10 @@ class Heartbeat < ApplicationRecord
   belongs_to :user
   belongs_to :ja4, optional: true
 
+  ACTORS = %w[human agent].freeze
+
   validates :time, presence: true
+  validates :actor, inclusion: { in: ACTORS }, allow_nil: true
 
   # after_create :mirror_to_wakatime
 
@@ -52,7 +55,7 @@ class Heartbeat < ApplicationRecord
   end
 
   def self.ai_indexed_attributes
-    %w[ai_model ai_session ai_subscription_plan ai_input_tokens ai_output_tokens ai_prompt_length ai_line_changes human_line_changes]
+    %w[ai_model ai_session ai_subscription_plan ai_input_tokens ai_output_tokens ai_prompt_length ai_line_changes human_line_changes actor]
   end
 
   def soft_delete

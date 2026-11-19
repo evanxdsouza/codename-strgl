@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_17_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_19_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -383,6 +383,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_120000) do
     t.string "user_agent"
     t.bigint "user_id", null: false
     t.integer "ysws_program", default: 0, null: false
+    t.string "actor"
     t.index ["category", "time"], name: "index_heartbeats_on_category_and_time"
     t.index ["fields_hash"], name: "index_heartbeats_on_fields_hash_when_not_deleted", unique: true, where: "(deleted_at IS NULL)"
     t.index ["ip_address"], name: "index_heartbeats_on_ip_address"
@@ -569,6 +570,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_120000) do
   create_table "privacy_token_uses", primary_key: "jti", id: :string, force: :cascade do |t|
     t.datetime "used_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["used_at"], name: "index_privacy_token_uses_on_used_at"
+  end
+
+  create_table "project_corrections", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.float "start_time", null: false
+    t.float "end_time", null: false
+    t.string "from_project"
+    t.string "to_project", null: false
+    t.integer "heartbeats_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "start_time"], name: "index_project_corrections_on_user_id_and_start_time"
+    t.index ["user_id"], name: "index_project_corrections_on_user_id"
   end
 
   create_table "project_labels", force: :cascade do |t|
@@ -820,6 +834,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_120000) do
   add_foreign_key "oauth_access_grants", "users", column: "resource_owner_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "users", column: "resource_owner_id"
+  add_foreign_key "project_corrections", "users"
   add_foreign_key "project_repo_mappings", "repositories"
   add_foreign_key "project_repo_mappings", "users"
   add_foreign_key "repo_host_events", "users"

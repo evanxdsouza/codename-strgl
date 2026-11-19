@@ -110,8 +110,11 @@
 
   <div class="grid min-w-0 grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
     <StatCard
-      label="Total Time"
+      label={data.agent_running_time == null ? "Total Time" : "Human Time"}
       value={secondsToDisplay(data.total_time)}
+      subtitle={data.agent_running_time == null
+        ? ""
+        : `+ ${secondsToDisplay(data.agent_running_time)} agent running, not counted`}
       highlight
     />
     {#each STAT_KEYS as [label, valueKey, singularKey, fallback]}

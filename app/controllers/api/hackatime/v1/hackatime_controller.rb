@@ -5,7 +5,7 @@ class Api::Hackatime::V1::HackatimeController < ApplicationController
   before_action :check_lockout, only: [ :push_heartbeats ]
 
   HEARTBEAT_KEYS = %i[
-    ai_input_tokens ai_line_changes ai_model ai_output_tokens ai_prompt_length ai_session
+    actor ai_input_tokens ai_line_changes ai_model ai_output_tokens ai_prompt_length ai_session
     ai_subscription_plan branch category created_at cursorpos editor
     entity human_line_changes is_write language line_additions line_deletions lineno
     lines machine operating_system project project_root_count time type user_agent plugin

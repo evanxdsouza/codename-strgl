@@ -16,6 +16,23 @@ class HeartbeatTest < ActiveSupport::TestCase
     ActiveJob::Base.queue_adapter = @original_queue_adapter
   end
 
+  test "a long agent run over a short human interaction counts the overlap as human and the rest as agent" do
+    user = create(:user)
+    t0 = 1_760_000_000.0
+    (0..600).step(60) { |s| create(:heartbeat, user:, time: t0 + s, actor: "agent") }
+    create(:heartbeat, user:, time: t0 + 1, actor: "human")
+    create(:heartbeat, user:, time: t0 + 30) # no actor: an editor plugin, counted as human
+
+    scope = user.heartbeats
+    assert_equal 600, Heartbeat.duration_seconds(scope)
+    assert_equal 29, Heartbeat.duration_seconds(scope.human_activity)
+    assert_equal 571, Heartbeat.agent_running_seconds(scope)
+  end
+
+  test "actor must be human or agent" do
+    assert_not build(:heartbeat, actor: "robot").valid?
+  end
+
   test "soft delete hides record from default scope and restore brings it back" do
     user = create(:user)
     heartbeat = create(:heartbeat, user: user,

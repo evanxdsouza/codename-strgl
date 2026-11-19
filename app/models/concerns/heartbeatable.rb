@@ -35,6 +35,10 @@ module Heartbeatable
         .with_valid_timestamps
     }
 
+    # Heartbeats a person produced. A NULL actor (editor plugins, imports)
+    # counts as human; only heartbeats a collector marked "agent" are left out.
+    scope :human_activity, -> { where("heartbeats.actor IS DISTINCT FROM 'agent'") }
+
     # This is to prevent PG timestamp overflow errors if someones gives us a
     # heartbeat with a time that is enormously far in the future.
     scope :with_valid_timestamps, -> { where("time >= 0 AND time <= ?", 253402300799) }
@@ -281,6 +285,14 @@ module Heartbeatable
         capped_durations = with_capped_duration(heartbeat_gaps)
         connection.select_value("SELECT COALESCE(SUM(duration), 0)::integer FROM (#{capped_durations.to_sql}) AS durations").to_i
       end
+    end
+
+    # Time covered only by agent activity: the scope's duration minus the
+    # duration of its human heartbeats alone. Extra heartbeats can only split
+    # gaps, so this is never negative, and human plus agent time is exactly the
+    # scope's duration. Time when both were active counts as human.
+    def agent_running_seconds(scope = all)
+      duration_seconds(scope) - duration_seconds(scope.human_activity)
     end
 
     def duration_seconds_boundary_aware(scope, start_time, end_time, excluded_categories: [])

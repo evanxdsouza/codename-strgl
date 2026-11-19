@@ -245,6 +245,7 @@ class HeartbeatIngest
       ai_prompt_length: hb[:ai_prompt_length],
       ai_line_changes: hb[:ai_line_changes],
       human_line_changes: hb[:human_line_changes],
+      actor: hb[:actor].presence,
       user_id: @user.id,
       time: normalize_heartbeat_time(hb[:time]),
       entity: hb[:entity],

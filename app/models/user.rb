@@ -199,6 +199,7 @@ class User < ApplicationRecord
   has_many :email_verification_requests, dependent: :destroy
   has_many :sign_in_tokens, dependent: :destroy
   has_many :project_repo_mappings
+  has_many :project_corrections
 
   has_many :api_keys
   has_many :admin_api_keys, dependent: :destroy
@@ -345,10 +346,22 @@ class User < ApplicationRecord
   def activity_graph_cache_key(timezone = self.timezone) = "user_#{id}_daily_durations_#{timezone}_#{heartbeat_cache_version}"
 
   # Include in the cache key of any per-user data derived from heartbeats.
-  def heartbeat_cache_version = @heartbeat_cache_version ||= HeartbeatExclusion.cache_versions([ id ]).fetch(id)
+  def heartbeat_cache_version
+    @heartbeat_cache_version ||= HeartbeatExclusion.cache_versions([ id ]).fetch(id) + (human_agent_split? ? "-split" : "")
+  end
 
-  def heartbeats_excluding_archived_projects
-    heartbeats.where(project: nil).or(heartbeats.where.not(project: project_repo_mappings.archived.select(:project_name)))
+  # Flipper flag: when enabled for a user, their dashboard counts human time
+  # only and reports agent-running time separately. Off by default, which
+  # keeps Hackatime's original durations.
+  HUMAN_AGENT_SPLIT_FLAG = :human_agent_split
+
+  def human_agent_split? = Flipper.enabled?(HUMAN_AGENT_SPLIT_FLAG, self)
+
+  # With the human/agent split on, agent heartbeats are left out unless
+  # include_agent is set, so every duration derived from this scope is human time.
+  def heartbeats_excluding_archived_projects(include_agent: false)
+    scope = heartbeats.where(project: nil).or(heartbeats.where.not(project: project_repo_mappings.archived.select(:project_name)))
+    human_agent_split? && !include_agent ? scope.human_activity : scope
   end
 
   def format_extension_text(duration)

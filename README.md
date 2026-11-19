@@ -22,6 +22,12 @@ Please read [DEVELOPMENT.md](DEVELOPMENT.md) for instructions on setting up and 
 
 Looking for the installer code? It's over at [hackclub/hackatime-setup](https://github.com/hackclub/hackatime-setup).
 
+## Struggle tracker fork
+
+This repository is a fork of Hackatime that separates human time from AI agent time. See [STRUGGLE_TRACKER.md](STRUGGLE_TRACKER.md).
+
 ## License
 
 Hackatime is licensed under the [MIT License.](https://github.com/hackclub/hackatime/blob/main/LICENSE) Go wild!
+
+Changes made in this fork are licensed under the [GNU AGPL v3](LICENSE-AGPL-3.0). See [NOTICE](NOTICE).

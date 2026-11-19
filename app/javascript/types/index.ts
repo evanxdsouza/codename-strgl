@@ -146,6 +146,8 @@ export type ProjectStats = {
 
 export type FilterableDashboardData = {
   total_time: number;
+  // Present only when the human/agent split flag is on for the user.
+  agent_running_time?: number;
   total_heartbeats: number;
   top_project: string | null;
   top_language: string | null;

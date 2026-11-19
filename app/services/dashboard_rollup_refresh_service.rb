@@ -13,7 +13,8 @@ class DashboardRollupRefreshService < ApplicationService
       build_record(dimension: DashboardRollup::TOTAL_DIMENSION, bucket: nil,
                    total_seconds: @scope.duration_seconds, now:,
                    source_heartbeats_count: @scope.count,
-                   source_max_heartbeat_time: @scope.maximum(:time)),
+                   source_max_heartbeat_time: @scope.maximum(:time),
+                   payload: human_agent_split_payload),
       build_record(dimension: DashboardRollup::FILTER_OPTIONS_DIMENSION, bucket: nil,
                    total_seconds: 0, now:, payload: filter_options_payload),
       build_record(dimension: DashboardRollup::ACTIVITY_GRAPH_DIMENSION, bucket: nil,
@@ -87,6 +88,15 @@ class DashboardRollupRefreshService < ApplicationService
   def grouped_durations(dimension)
     return DashboardData::Snapshots.project_grouped_durations(@scope) if dimension == :project
     Heartbeat.attributed_durations_by(@scope, dimension)
+  end
+
+  # Records which duration rule built the rollup, so a flag change marks it
+  # stale, and the agent-running time shown beside the human total.
+  def human_agent_split_payload
+    return { "human_agent_split" => false } unless @user.human_agent_split?
+
+    { "human_agent_split" => true,
+      "agent_seconds" => Heartbeat.agent_running_seconds(@user.heartbeats_excluding_archived_projects(include_agent: true)) }
   end
 
   def filter_options_payload

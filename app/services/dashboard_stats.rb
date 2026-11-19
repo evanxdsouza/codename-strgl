@@ -150,6 +150,10 @@ class DashboardStats
         DashboardData::Snapshots.aggregate_query_snapshot(user: user, scope: hb)
       end
       DashboardData::Snapshots.fill_aggregate_result(result: result, snapshot: snapshot, archived: archived, helpers: h)
+      if user.human_agent_split?
+        all_activity = user.heartbeats_excluding_archived_projects(include_agent: true).filter_by_time_range(params[:interval], params[:from], params[:to])
+        result[:agent_running_time] = Heartbeat.agent_running_seconds(filtered_dashboard_heartbeats(raw_filter_options, scope: all_activity))
+      end
     end
 
     result
@@ -181,6 +185,7 @@ class DashboardStats
     Time.use_zone(user.timezone) do
       DashboardData::Snapshots.fill_aggregate_result(result: result, snapshot: snapshot, archived: archived, helpers: ApplicationController.helpers)
     end
+    result[:agent_running_time] = rollup_total_row.payload.fetch("agent_seconds", 0).to_i if user.human_agent_split?
     result
   end
 
@@ -204,7 +209,7 @@ class DashboardStats
     return unless rollups_available? && rollup_eligible?
 
     total_row = rollup_total_row
-    unless total_row
+    unless total_row && rollup_split_matches?(total_row)
       schedule_rollup_refresh(wait: 0.seconds)
       return
     end
@@ -257,6 +262,11 @@ class DashboardStats
 
     schedule_rollup_refresh(wait: 0.seconds)
     DashboardData::Snapshots.coding_rhythm_snapshot(user: user, scope: dashboard_heartbeats)
+  end
+
+  # A rollup built under the other duration rule is unusable, not just stale.
+  def rollup_split_matches?(total_row)
+    (total_row.payload.is_a?(Hash) && total_row.payload["human_agent_split"] == true) == user.human_agent_split?
   end
 
   def aggregate_rollup_stale?(total_row)

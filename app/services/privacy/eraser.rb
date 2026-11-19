@@ -7,7 +7,7 @@ module Privacy
       api_keys admin_api_keys dashboard_rollups deletion_requests documentation_feedbacks
       email_addresses email_verification_requests goals heartbeat_exclusions
       heartbeat_import_runs heartbeat_import_sources heartbeats instance_import_sources
-      leaderboard_entries project_labels project_repo_mappings repo_host_events
+      leaderboard_entries project_corrections project_labels project_repo_mappings repo_host_events
       sign_in_tokens trust_level_audit_logs wakatime_mirrors commits
     ].freeze
     USER_JOBS = %w[

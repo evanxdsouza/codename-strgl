@@ -156,6 +156,8 @@ Rails.application.routes.draw do
 
   get "my/projects", to: "my/project_repo_mappings#index", as: :my_projects, export: true
   get "my/projects/:project_name", to: "my/project_repo_mappings#show", as: :my_project, constraints: { project_name: /.+/ }, export: true
+  get "my/lookback", to: "my/lookback#show", as: :my_lookback, export: true
+  post "my/lookback/corrections", to: "my/lookback#create_correction", as: :my_lookback_corrections, export: true
 
   # Namespace for current user actions
   defaults export: true do

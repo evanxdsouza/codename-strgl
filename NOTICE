@@ -1,0 +1,13 @@
+codename-strgl
+Copyright (c) 2026 codename-strgl contributors
+
+This project is a fork of Hackatime (https://github.com/hackclub/hackatime),
+copyright (c) 2026 Hack Club, released under the MIT License. The original
+licence text is kept in LICENSE and continues to apply to Hackatime's code.
+
+Changes and new code added in this fork are licensed under the GNU Affero
+General Public License, version 3 (see LICENSE-AGPL-3.0). Because the combined
+work includes AGPL code, anyone who runs a modified version as a network
+service must offer its users the corresponding source.
+
+Thank you to Hack Club and the Hackatime contributors.
