@@ -43,7 +43,6 @@ The server has no field for them.
 
 ## Collector
 
-The Go collector that reads Claude Code and Codex transcripts and sends
-heartbeats with `actor` is not part of this change. Until it exists, `actor`
-only arrives from clients that set it themselves, and all other time counts as
-human, as in Hackatime.
+[`collector/`](collector/README.md) holds a Go program that reads Claude Code
+and Codex transcripts locally and sends heartbeats with `actor` set. Its README
+covers setup, what it reads and its known limits.
