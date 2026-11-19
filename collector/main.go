@@ -54,6 +54,9 @@ type State struct {
 	Files    map[string]*fileState `json:"files"`
 	LastSent map[string]time.Time  `json:"last_sent"` // session|actor
 	Pending  map[string][2]int64   `json:"pending"`   // tokens of skipped agent events, by session
+	// Latest prompt per session whose 2-minute credit boundary has not been
+	// sent yet.
+	OpenPrompt map[string]time.Time `json:"open_prompt"`
 }
 
 type source struct {
@@ -189,9 +192,34 @@ func readNew(src source, path string, fst *fileState, state *State, since time.T
 		if !ok || ev.Time.Before(since) {
 			continue
 		}
-		if hb, ok := toHeartbeat(src.harness, ev, state); ok {
-			beats = append(beats, hb)
+		beats = append(beats, toHeartbeats(src.harness, ev, state)...)
+	}
+	return beats
+}
+
+// creditWindow matches the server's heartbeat timeout: each prompt credits
+// the person with up to this much time while the agent runs.
+const creditWindow = 2 * time.Minute
+
+// toHeartbeats turns one event into the heartbeats to send. When the agent is
+// still working past a prompt's 2-minute credit window, it adds an agent
+// heartbeat exactly at the window's end, so the server's credit window ends
+// there rather than at whichever downsampled heartbeat came before it.
+func toHeartbeats(harness string, ev Event, state *State) []Heartbeat {
+	var beats []Heartbeat
+	if ev.Actor == "human" {
+		state.OpenPrompt[ev.Session] = ev.Time
+	} else if prompt, ok := state.OpenPrompt[ev.Session]; ok && ev.Time.Sub(prompt) >= creditWindow {
+		delete(state.OpenPrompt, ev.Session)
+		if boundary := prompt.Add(creditWindow); ev.Time.After(boundary) {
+			marker := ev
+			marker.Time, marker.InputTokens, marker.OutputTokens = boundary, 0, 0
+			beats = append(beats, heartbeatFor(harness, marker, state))
+			state.LastSent[ev.Session+"|agent"] = boundary
 		}
+	}
+	if hb, ok := toHeartbeat(harness, ev, state); ok {
+		beats = append(beats, hb)
 	}
 	return beats
 }
@@ -208,8 +236,18 @@ func toHeartbeat(harness string, ev Event, state *State) (Heartbeat, bool) {
 		}
 	}
 	state.LastSent[key] = ev.Time
+	hb := heartbeatFor(harness, ev, state)
+	if ev.Actor == "agent" {
+		pending := state.Pending[ev.Session]
+		hb.AIInputTokens, hb.AIOutputTokens = pending[0], pending[1]
+		delete(state.Pending, ev.Session)
+	}
+	return hb, true
+}
+
+func heartbeatFor(harness string, ev Event, state *State) Heartbeat {
 	project := projectFor(ev.Cwd)
-	hb := Heartbeat{
+	return Heartbeat{
 		Time:           float64(ev.Time.UnixNano()) / 1e9,
 		Entity:         harness,
 		Type:           "app",
@@ -222,12 +260,6 @@ func toHeartbeat(harness string, ev Event, state *State) (Heartbeat, bool) {
 		AIPromptLength: ev.PromptLength,
 		UserAgent:      userAgent(harness, ev.Version),
 	}
-	if ev.Actor == "agent" {
-		pending := state.Pending[ev.Session]
-		hb.AIInputTokens, hb.AIOutputTokens = pending[0], pending[1]
-		delete(state.Pending, ev.Session)
-	}
-	return hb, true
 }
 
 // userAgent puts the harness before the collector so the server's user-agent
@@ -306,6 +338,9 @@ func loadState(path string) *State {
 	}
 	if state.Pending == nil {
 		state.Pending = map[string][2]int64{}
+	}
+	if state.OpenPrompt == nil {
+		state.OpenPrompt = map[string]time.Time{}
 	}
 	return state
 }

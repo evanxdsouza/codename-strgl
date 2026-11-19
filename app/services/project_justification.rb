@@ -4,8 +4,9 @@
 # and the user row, using the same per-project gap rule as
 # Heartbeat.group(:project).duration_seconds: each heartbeat adds the gap since
 # the previous heartbeat of its project, capped at the heartbeat timeout.
-# Human time runs that rule over human heartbeats only; agent-running time is
-# the rest, so human + agent = raw for every session, project and total.
+# Human time runs that rule over human-credited heartbeats (human ones, plus
+# agent ones up to 2 minutes after the latest human one, per project);
+# agent-running time is the rest, so human + agent = raw for every session, project and total.
 class ProjectJustification
   RULE_SET = "v0".freeze
   REPO_URL = "https://github.com/evanxdsouza/codename-strgl".freeze
@@ -32,15 +33,19 @@ class ProjectJustification
     @sessions ||= begin
       timeout = Heartbeat.heartbeat_timeout_duration.to_i
       rows.group_by { |row| row[:project] }.flat_map do |project, beats|
-        last_human_time = nil
+        last_human_time = last_credited_time = nil
         beats.slice_before { |beat| beat[:previous_time].nil? || beat[:time] - beat[:previous_time] > timeout }.map do |session_beats|
           human = raw = 0.0
           session_beats.each do |beat|
             raw += beat[:previous_time] ? [ beat[:time] - beat[:previous_time], timeout ].min : 0
-            next if beat[:actor] == "agent"
+            human_beat = beat[:actor] != "agent"
+            # Heartbeat.human_credited, within one project: human heartbeats and
+            # agent heartbeats up to one timeout after the latest human one.
+            next unless human_beat || (last_human_time && beat[:time] - last_human_time <= timeout)
 
-            human += [ beat[:time] - last_human_time, timeout ].min if last_human_time
-            last_human_time = beat[:time]
+            human += [ beat[:time] - last_credited_time, timeout ].min if last_credited_time
+            last_credited_time = beat[:time]
+            last_human_time = beat[:time] if human_beat
           end
           Session.new(
             project:, start_time: session_beats.first[:time], end_time: session_beats.last[:time],
@@ -176,7 +181,7 @@ class ProjectJustification
   def user_history_section
     all_activity = user.heartbeats_excluding_archived_projects(include_agent: true)
     first_time = all_activity.with_valid_timestamps.minimum(:time)
-    human = Heartbeat.duration_seconds(all_activity.human_activity)
+    human = Heartbeat.duration_seconds(all_activity.human_credited)
     agent = Heartbeat.agent_running_seconds(all_activity)
     project_count = all_activity.where.not(project: [ nil, "" ]).distinct.count(:project)
     since = first_time ? date(local_date(first_time)) : "never"

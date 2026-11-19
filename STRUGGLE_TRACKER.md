@@ -23,13 +23,17 @@ time an AI agent spends running for them. Everything else works like Hackatime.
 ## How time is counted
 
 Hackatime's rule is unchanged: each heartbeat adds the gap since the previous
-one, capped at 2 minutes. Human time is that rule applied to human heartbeats
-only. Agent-running time is the total minus human time. So:
+one, capped at 2 minutes. Human time is that rule applied to the human-credited
+heartbeats: every heartbeat not marked `agent` (editor plugins and imports have
+no actor and count as human), plus agent heartbeats up to 2 minutes after the
+latest human one. Agent-running time is the total minus human time. So:
 
+- each prompt credits the person with up to 2 minutes, ending early at the
+  next prompt or when the agent stops;
 - human + agent always equals the original total;
 - when a person and an agent are both active, the time counts as human;
-- a 10 minute agent run where the person only typed for 30 seconds gives
-  roughly 0.5 minutes human and 9.5 minutes agent, not 10 minutes human.
+- one prompt followed by a 10 minute agent run gives 2 minutes human and
+  8 minutes agent.
 
 ## What is sent and what stays local
 

@@ -357,11 +357,12 @@ class User < ApplicationRecord
 
   def human_agent_split? = Flipper.enabled?(HUMAN_AGENT_SPLIT_FLAG, self)
 
-  # With the human/agent split on, agent heartbeats are left out unless
-  # include_agent is set, so every duration derived from this scope is human time.
+  # With the human/agent split on, only human-credited heartbeats are kept
+  # unless include_agent is set, so every duration derived from this scope is
+  # human time.
   def heartbeats_excluding_archived_projects(include_agent: false)
     scope = heartbeats.where(project: nil).or(heartbeats.where.not(project: project_repo_mappings.archived.select(:project_name)))
-    human_agent_split? && !include_agent ? scope.human_activity : scope
+    human_agent_split? && !include_agent ? scope.human_credited : scope
   end
 
   def format_extension_text(duration)

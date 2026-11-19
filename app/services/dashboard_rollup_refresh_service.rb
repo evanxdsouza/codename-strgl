@@ -96,7 +96,7 @@ class DashboardRollupRefreshService < ApplicationService
     return { "human_agent_split" => false } unless @user.human_agent_split?
 
     { "human_agent_split" => true,
-      "agent_seconds" => Heartbeat.agent_running_seconds(@user.heartbeats_excluding_archived_projects(include_agent: true)) }
+      "agent_seconds" => @user.heartbeats_excluding_archived_projects(include_agent: true).duration_seconds - @scope.duration_seconds }
   end
 
   def filter_options_payload

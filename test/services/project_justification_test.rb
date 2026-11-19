@@ -23,12 +23,14 @@ class ProjectJustificationTest < ActiveSupport::TestCase
     raw_by_project = Heartbeat.where(user: @user).group(:project).duration_seconds
     assert_equal raw_by_project.values.sum, report.raw_seconds
     assert_equal 600 + 300, report.raw_seconds
-    # Human: 1 -> 30 on terminet, plus the 300 seconds of tnt-browser.
-    assert_equal 29 + 300, report.human_seconds
-    assert_equal 571, report.agent_seconds
+    # Human on terminet: the prompt at 1, the plugin heartbeat at 30 and the
+    # agent heartbeats at 60 and 120, which fall within 2 minutes of it, so
+    # 1 -> 120. Plus the 300 seconds of tnt-browser.
+    assert_equal 119 + 300, report.human_seconds
+    assert_equal 481, report.agent_seconds
 
     terminet, browser = report.sessions
-    assert_equal [ "terminet", 29, 571, "claude-code", 1 ],
+    assert_equal [ "terminet", 119, 481, "claude-code", 1 ],
       [ terminet.project, terminet.human_seconds.round, terminet.agent_seconds.round, terminet.harness, terminet.prompts ]
     assert_equal [ "tnt-browser", 300, 0 ], [ browser.project, browser.human_seconds.round, browser.agent_seconds.round ]
   end
@@ -40,8 +42,8 @@ class ProjectJustificationTest < ActiveSupport::TestCase
        DEFLATION\ JUSTIFICATION UPDATE\ JUSTIFICATION SESSIONS AI\ USAGE COMMITS CORRECTIONS
        USER\ HISTORY REVIEW\ INFO LINKS].each { |section| assert_includes text, "[#{section}]" }
     assert_includes text, "Projects: terminet 10/19/2026-10/19/2026, tnt-browser 10/19/2026-10/19/2026"
-    assert_includes text, "Exact seconds: 900 = 329 human + 571 agent running"
-    assert_includes text, "[1] 10/19/2026 terminet: 0.01h human, 0.16h agent, claude-code, 1 prompts"
+    assert_includes text, "Exact seconds: 900 = 419 human + 481 agent running"
+    assert_includes text, "[1] 10/19/2026 terminet: 0.03h human, 0.13h agent, claude-code, 1 prompts"
     assert_includes text, "(reviewer justification)"
     assert_no_match(/[–—]/, text)
   end
@@ -85,13 +87,13 @@ class ProjectJustificationTest < ActiveSupport::TestCase
     Flipper.enable_actor(User::HUMAN_AGENT_SPLIT_FLAG, @user)
     user = User.find(@user.id)
     split = DashboardStats.new(user:).build_filterable_dashboard_data(nil)
-    # Human: 1 -> 30, then 30 -> 3600 capped at 120, then 300 on tnt-browser.
-    assert_equal 29 + 120 + 300, split[:total_time]
+    # Human: 1 -> 120, then 120 -> 3600 capped at 120, then 300 on tnt-browser.
+    assert_equal 119 + 120 + 300, split[:total_time]
     assert_equal 1020, split[:total_time] + split[:agent_running_time]
 
     DashboardRollupRefreshService.new(user:).call
     from_rollup = DashboardStats.new(user: User.find(@user.id)).build_filterable_dashboard_data(nil)
-    assert_equal [ 449, 571 ], [ from_rollup[:total_time], from_rollup[:agent_running_time] ]
+    assert_equal [ 539, 481 ], [ from_rollup[:total_time], from_rollup[:agent_running_time] ]
   end
 
   private

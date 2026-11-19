@@ -90,8 +90,8 @@ func TestClaudeLongAgentRunWithShortHumanPrompt(t *testing.T) {
 	if humans != 1 {
 		t.Errorf("human heartbeats = %d, want 1 (tool results and meta lines are not prompts)", humans)
 	}
-	// 120 agent lines over ~600s, at most one per 30s.
-	if agents < 18 || agents > 22 {
+	// 120 agent lines over ~600s, at most one per 30s, plus the boundary at 2 minutes.
+	if agents < 18 || agents > 23 {
 		t.Errorf("agent heartbeats = %d, want about 20", agents)
 	}
 	// Tokens of skipped events roll into the next sent heartbeat; only the
@@ -173,5 +173,49 @@ func TestProjectWithoutGitUsesDirectoryName(t *testing.T) {
 	_ = os.MkdirAll(dir, 0o755)
 	if p := projectFor(dir); p.Name != "scratch" || p.Branch != "" {
 		t.Fatalf("got %+v", p)
+	}
+}
+
+func TestAgentHeartbeatMarksTheEndOfTheCreditWindow(t *testing.T) {
+	_, cwd := repo(t)
+	home := t.TempDir()
+	lines := []string{claudeLine("user", 0, cwd, `,"message":{"role":"user","content":"go"}`)}
+	// Agent output every 25 seconds for 10 minutes: none lands on 120 exactly.
+	for s := 25; s <= 600; s += 25 {
+		lines = append(lines, claudeLine("assistant", s, cwd, `,"message":{"model":"m","role":"assistant","content":[]}`))
+	}
+	write(t, filepath.Join(home, "projects", "-x", "s1.jsonl"), lines...)
+
+	beats := scanOnce(t, source{"claude-code", filepath.Join(home, "projects"), parseClaudeLine}, loadState(filepath.Join(home, "s.json")))
+
+	start := float64(t0.Unix())
+	boundaries := 0
+	for i, b := range beats {
+		if i > 0 && b.Time < beats[i-1].Time {
+			t.Fatalf("heartbeats out of order at %d", i)
+		}
+		if b.Time == start+120 {
+			boundaries++
+			if b.Actor != "agent" {
+				t.Errorf("boundary heartbeat actor %q", b.Actor)
+			}
+		}
+	}
+	if boundaries != 1 {
+		t.Fatalf("heartbeats at prompt + 120s = %d, want 1", boundaries)
+	}
+}
+
+func TestNoBoundaryWhenTheAgentStopsInsideTheWindow(t *testing.T) {
+	_, cwd := repo(t)
+	home := t.TempDir()
+	write(t, filepath.Join(home, "projects", "-x", "s1.jsonl"),
+		claudeLine("user", 0, cwd, `,"message":{"role":"user","content":"go"}`),
+		claudeLine("assistant", 45, cwd, `,"message":{"model":"m","role":"assistant","content":[]}`),
+		claudeLine("user", 500, cwd, `,"message":{"role":"user","content":"next"}`))
+
+	beats := scanOnce(t, source{"claude-code", filepath.Join(home, "projects"), parseClaudeLine}, loadState(filepath.Join(home, "s.json")))
+	if len(beats) != 3 {
+		t.Fatalf("got %d heartbeats, want 3 (no boundary after the agent stopped at 45s)", len(beats))
 	}
 }

@@ -152,7 +152,9 @@ class DashboardStats
       DashboardData::Snapshots.fill_aggregate_result(result: result, snapshot: snapshot, archived: archived, helpers: h)
       if user.human_agent_split?
         all_activity = user.heartbeats_excluding_archived_projects(include_agent: true).filter_by_time_range(params[:interval], params[:from], params[:to])
-        result[:agent_running_time] = Heartbeat.agent_running_seconds(filtered_dashboard_heartbeats(raw_filter_options, scope: all_activity))
+        # The rest of the raw total, so human + agent always add up to it.
+        raw = Heartbeat.duration_seconds(filtered_dashboard_heartbeats(raw_filter_options, scope: all_activity))
+        result[:agent_running_time] = raw - result[:total_time]
       end
     end
 

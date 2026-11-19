@@ -16,17 +16,39 @@ class HeartbeatTest < ActiveSupport::TestCase
     ActiveJob::Base.queue_adapter = @original_queue_adapter
   end
 
-  test "a long agent run over a short human interaction counts the overlap as human and the rest as agent" do
+  test "one prompt followed by a ten minute agent run credits two minutes of human time" do
     user = create(:user)
     t0 = 1_760_000_000.0
-    (0..600).step(60) { |s| create(:heartbeat, user:, time: t0 + s, actor: "agent") }
-    create(:heartbeat, user:, time: t0 + 1, actor: "human")
-    create(:heartbeat, user:, time: t0 + 30) # no actor: an editor plugin, counted as human
+    create(:heartbeat, user:, time: t0, actor: "human")
+    (30..600).step(30) { |s| create(:heartbeat, user:, time: t0 + s, actor: "agent") }
 
     scope = user.heartbeats
     assert_equal 600, Heartbeat.duration_seconds(scope)
-    assert_equal 29, Heartbeat.duration_seconds(scope.human_activity)
-    assert_equal 571, Heartbeat.agent_running_seconds(scope)
+    assert_equal 120, Heartbeat.duration_seconds(scope.human_credited)
+    assert_equal 480, Heartbeat.agent_running_seconds(scope)
+  end
+
+  test "the human credit window ends early at the next prompt and when the agent stops" do
+    user = create(:user)
+    t0 = 1_760_000_000.0
+    # Prompt at 0 and again at 60: credit runs 0 to 180, not 0 to 240.
+    create(:heartbeat, user:, time: t0, actor: "human")
+    create(:heartbeat, user:, time: t0 + 60, actor: "human")
+    (30..600).step(30) { |s| create(:heartbeat, user:, time: t0 + s, actor: "agent") }
+    # A later prompt whose agent run lasts only 45 seconds.
+    create(:heartbeat, user:, time: t0 + 2000, actor: "human")
+    create(:heartbeat, user:, time: t0 + 2045, actor: "agent")
+    # An editor plugin heartbeat (no actor) counts as human.
+    create(:heartbeat, user:, time: t0 + 3000)
+    create(:heartbeat, user:, time: t0 + 3050)
+
+    scope = user.heartbeats
+    raw = Heartbeat.duration_seconds(scope)
+    human = Heartbeat.duration_seconds(scope.human_credited)
+    # 0 -> 180 (60 + 120), then a capped 120 to the prompt at 2000, 45 until
+    # the agent stopped, a capped 120 to 3000, and 50.
+    assert_equal 180 + 120 + 45 + 120 + 50, human
+    assert_equal raw, human + Heartbeat.agent_running_seconds(scope)
   end
 
   test "actor must be human or agent" do

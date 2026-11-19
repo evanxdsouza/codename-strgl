@@ -67,9 +67,11 @@ skipped lines are added to the next heartbeat. Every human prompt is sent.
   release. The Codex format was checked against its source code (openai/codex,
   November 2026). The Claude Code format was checked against Anthropic's docs
   and published schema write-ups only; no real transcript was available.
-- Human time comes only from prompts. Reading the agent's output and thinking
-  before the next prompt is not seen, and a single prompt followed only by
-  agent work counts as 0 human seconds under Hackatime's gap rule. Editor
-  plugins still add human time while you edit files yourself.
+- Human time comes only from prompts: each prompt credits up to 2 minutes,
+  ending early at the next prompt or when the agent stops. Reading output for
+  longer than that is not seen. Editor plugins still add human time while you
+  edit files yourself. While the agent is still running 2 minutes after a
+  prompt, the collector sends an extra agent heartbeat at exactly that point
+  so the server's credit window ends on time.
 - Not yet tested on a real Windows or macOS machine; the binaries were only
   cross-compiled.

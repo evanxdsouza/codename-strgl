@@ -35,10 +35,6 @@ module Heartbeatable
         .with_valid_timestamps
     }
 
-    # Heartbeats a person produced. A NULL actor (editor plugins, imports)
-    # counts as human; only heartbeats a collector marked "agent" are left out.
-    scope :human_activity, -> { where("heartbeats.actor IS DISTINCT FROM 'agent'") }
-
     # This is to prevent PG timestamp overflow errors if someones gives us a
     # heartbeat with a time that is enormously far in the future.
     scope :with_valid_timestamps, -> { where("time >= 0 AND time <= ?", 253402300799) }
@@ -287,12 +283,33 @@ module Heartbeatable
       end
     end
 
-    # Time covered only by agent activity: the scope's duration minus the
-    # duration of its human heartbeats alone. Extra heartbeats can only split
-    # gaps, so this is never negative, and human plus agent time is exactly the
-    # scope's duration. Time when both were active counts as human.
+    # The heartbeats that count as human time: every heartbeat not marked
+    # "agent" (a NULL actor, from editor plugins and imports, is human), plus
+    # agent heartbeats at most one heartbeat timeout (2 minutes) after the
+    # latest human one. Running the normal gap rule over them credits each
+    # prompt with up to 2 minutes, ending early at the next human heartbeat or
+    # when the agent stops. The collector sends an agent heartbeat exactly 2
+    # minutes after a prompt while the agent is still running, so the window
+    # ends on time instead of at the last agent heartbeat inside it.
+    def human_credited
+      table = quoted_table_name
+      human = "#{table}.actor IS DISTINCT FROM 'agent'"
+      marked = unscope(:select, :order).select(:id, Arel.sql(<<~SQL.squish))
+        #{human} AS human,
+        #{table}.time - MAX(CASE WHEN #{human} THEN #{table}.time END)
+          OVER (ORDER BY #{table}.time, #{table}.id ROWS UNBOUNDED PRECEDING) AS since_human
+      SQL
+      credited = unscoped.from(marked, :credited)
+        .where("credited.human OR credited.since_human <= ?", heartbeat_timeout_duration.to_i)
+        .select("credited.id")
+      where(id: credited)
+    end
+
+    # Agent-running time: the scope's duration minus its human time. Removing
+    # heartbeats can only merge gaps, so this is never negative, and human
+    # plus agent time is exactly the scope's duration.
     def agent_running_seconds(scope = all)
-      duration_seconds(scope) - duration_seconds(scope.human_activity)
+      duration_seconds(scope) - duration_seconds(scope.human_credited)
     end
 
     def duration_seconds_boundary_aware(scope, start_time, end_time, excluded_categories: [])
