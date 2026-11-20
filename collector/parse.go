@@ -45,7 +45,14 @@ func parseClaudeLine(line []byte, ctx *fileContext) (Event, bool) {
 		Version     string `json:"version"`
 		IsSidechain bool   `json:"isSidechain"`
 		IsMeta      bool   `json:"isMeta"`
-		Message     struct {
+		// The summary Claude Code writes as a user line after compaction.
+		IsCompactSummary bool `json:"isCompactSummary"`
+		// Absent or "human" on typed prompts; "task-notification", "peer",
+		// "coordinator" and "auto-continuation" on lines the runtime injects.
+		Origin struct {
+			Kind string `json:"kind"`
+		} `json:"origin"`
+		Message struct {
 			Model   string          `json:"model"`
 			Content json.RawMessage `json:"content"`
 			Usage   struct {
@@ -85,6 +92,9 @@ func parseClaudeLine(line []byte, ctx *fileContext) (Event, bool) {
 	if rec.IsMeta {
 		return Event{}, false
 	}
+	if rec.IsCompactSummary || (rec.Origin.Kind != "" && rec.Origin.Kind != "human") {
+		return ev, true // agent activity, never a prompt
+	}
 	if n := claudePromptLength(rec.Message.Content); n > 0 && !rec.IsSidechain {
 		ev.Actor = "human"
 		ev.PromptLength = n
@@ -121,12 +131,24 @@ func claudePromptLength(content json.RawMessage) int {
 	return n
 }
 
-// isInjected reports text Claude Code writes into a user turn itself, such as
-// slash command and local command output wrappers.
+// injectedPrefixes start text Claude Code writes into a user turn itself:
+// slash command wrappers and output, bash mode output, background task
+// notices, system reminders, interrupt markers and compaction summaries.
+var injectedPrefixes = []string{
+	"<local-command-", "<command-name>", "<command-message>", "<command-args>",
+	"<bash-stdout>", "<bash-stderr>", "<task-notification>", "<system-reminder>",
+	"Caveat: The messages below", "[Request interrupted",
+	"This session is being continued from a previous conversation",
+}
+
 func isInjected(text string) bool {
 	t := strings.TrimSpace(text)
-	return strings.HasPrefix(t, "<local-command-") || strings.HasPrefix(t, "<command-name>") ||
-		strings.HasPrefix(t, "<command-message>") || strings.HasPrefix(t, "[Request interrupted")
+	for _, prefix := range injectedPrefixes {
+		if strings.HasPrefix(t, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 // parseCodexLine reads one line of a Codex rollout

@@ -219,3 +219,33 @@ func TestNoBoundaryWhenTheAgentStopsInsideTheWindow(t *testing.T) {
 		t.Fatalf("got %d heartbeats, want 3 (no boundary after the agent stopped at 45s)", len(beats))
 	}
 }
+
+func TestOnlyTypedPromptsAreHuman(t *testing.T) {
+	_, cwd := repo(t)
+	home := t.TempDir()
+	summary := "This session is being continued from a previous conversation that ran out of context. The conversation is summarized below:\\nAnalysis:\\n..."
+	write(t, filepath.Join(home, "projects", "-x", "s1.jsonl"),
+		claudeLine("user", 0, cwd, `,"message":{"role":"user","content":"real prompt"}`),
+		`{"type":"system","subtype":"compact_boundary","content":"Conversation compacted","isMeta":false,"timestamp":"`+ts(1)+`","compactMetadata":{"trigger":"auto","preTokens":156579}}`,
+		// Compaction summary with its flag, and one without it (text fallback).
+		claudeLine("user", 1, cwd, `,"message":{"role":"user","content":"`+summary+`"},"isVisibleInTranscriptOnly":true,"isCompactSummary":true`),
+		claudeLine("user", 2, cwd, `,"message":{"role":"user","content":"`+summary+`"}`),
+		claudeLine("user", 3, cwd, `,"origin":{"kind":"task-notification"},"message":{"role":"user","content":"<task-notification>done</task-notification>"}`),
+		claudeLine("user", 4, cwd, `,"origin":{"kind":"peer"},"message":{"role":"user","content":"hello from another session"}`),
+		claudeLine("user", 5, cwd, `,"message":{"role":"user","content":[{"type":"text","text":"<system-reminder>x</system-reminder>"}]}`),
+		claudeLine("user", 6, cwd, `,"message":{"role":"user","content":"<bash-stdout>ok</bash-stdout><bash-stderr></bash-stderr>"}`),
+		claudeLine("user", 7, cwd, `,"message":{"role":"user","content":"<command-name>/clear</command-name>"}`),
+		claudeLine("user", 8, cwd, `,"origin":{"kind":"human"},"message":{"role":"user","content":[{"type":"text","text":"second prompt"},{"type":"text","text":"<system-reminder>ctx</system-reminder>"}]}`),
+	)
+
+	beats := scanOnce(t, source{"claude-code", filepath.Join(home, "projects"), parseClaudeLine}, loadState(filepath.Join(home, "s.json")))
+	var humans []int
+	for _, b := range beats {
+		if b.Actor == "human" {
+			humans = append(humans, b.AIPromptLength)
+		}
+	}
+	if fmt.Sprint(humans) != "[11 13]" {
+		t.Fatalf("human prompt lengths = %v, want [11 13] (only the two typed prompts)", humans)
+	}
+}
