@@ -48,5 +48,7 @@ The server has no field for them.
 ## Collector
 
 [`collector/`](collector/README.md) holds a Go program that reads Claude Code
-and Codex transcripts locally and sends heartbeats with `actor` set. Its README
+and Codex transcripts locally, plus metadata from an OpenCode v2 local plugin,
+and sends heartbeats with `actor` set. OpenCode needs the plugin installed;
+its prompts and responses are not copied into the tracking spool. The README
 covers setup, what it reads and its known limits.

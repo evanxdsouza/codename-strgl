@@ -21,15 +21,17 @@ type Event struct {
 	PromptLength int    // > 0 only for a human prompt
 	InputTokens  int64
 	OutputTokens int64
+	End          bool // final agent activity must not be downsampled
 }
 
 // fileContext carries what a transcript states once and later lines rely on,
 // such as Codex's session_meta cwd.
 type fileContext struct {
-	Cwd     string
-	Session string
-	Model   string
-	Version string
+	Cwd         string
+	Session     string
+	Model       string
+	Version     string
+	OpenCodeSeq int64 // durable events can be replayed after a plugin restart
 }
 
 // parseClaudeLine reads one line of a Claude Code transcript
@@ -222,6 +224,46 @@ func parseCodexLine(line []byte, ctx *fileContext) (Event, bool) {
 		return Event{}, false
 	}
 	return ev, true
+}
+
+// parseOpenCodeLine reads metadata written by opencode.js, not OpenCode's
+// internal database or JSON session export. Durable sequence numbers make
+// replayed events idempotent; periodic activity samples have no sequence.
+func parseOpenCodeLine(line []byte, ctx *fileContext) (Event, bool) {
+	var rec struct {
+		Schema       int    `json:"schema"`
+		Sequence     int64  `json:"sequence"`
+		Timestamp    int64  `json:"timestamp"` // milliseconds since the Unix epoch
+		Session      string `json:"session_id"`
+		Actor        string `json:"actor"`
+		Cwd          string `json:"cwd"`
+		Model        string `json:"model"`
+		Version      string `json:"version"`
+		PromptLength int    `json:"prompt_length"`
+		InputTokens  int64  `json:"input_tokens"`
+		OutputTokens int64  `json:"output_tokens"`
+		End          bool   `json:"end"`
+	}
+	if json.Unmarshal(line, &rec) != nil || rec.Schema != 1 || rec.Timestamp <= 0 || rec.Session == "" ||
+		(rec.Actor != "human" && rec.Actor != "agent") || (rec.End && rec.Actor != "agent") {
+		return Event{}, false
+	}
+	if rec.Sequence > 0 {
+		if rec.Sequence <= ctx.OpenCodeSeq {
+			return Event{}, false
+		}
+		ctx.OpenCodeSeq = rec.Sequence
+	}
+	ctx.Cwd = firstNonEmpty(rec.Cwd, ctx.Cwd)
+	ctx.Session = rec.Session
+	ctx.Model = firstNonEmpty(rec.Model, ctx.Model)
+	ctx.Version = firstNonEmpty(rec.Version, ctx.Version)
+	return Event{
+		Time: time.UnixMilli(rec.Timestamp).UTC(), Actor: rec.Actor, Cwd: ctx.Cwd,
+		Session: ctx.Session, Model: ctx.Model, Version: ctx.Version,
+		PromptLength: rec.PromptLength, InputTokens: rec.InputTokens,
+		OutputTokens: rec.OutputTokens, End: rec.End,
+	}, true
 }
 
 func firstNonEmpty(a, b string) string {

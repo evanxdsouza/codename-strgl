@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// strgl-collector tails Claude Code and Codex transcripts on this machine and
-// sends WakaTime-compatible heartbeats, marked human or agent, to a Hackatime
-// compatible server. Prompt and response text never leave the machine.
+// strgl-collector tails Claude Code and Codex transcripts and OpenCode plugin
+// metadata on this machine and sends WakaTime-compatible heartbeats, marked
+// human or agent, to a Hackatime compatible server. Text stays on the machine.
 package main
 
 import (
@@ -130,9 +130,14 @@ func defaultSources(home string) []source {
 	if codex == "" {
 		codex = filepath.Join(home, ".codex")
 	}
+	opencode := os.Getenv("STRGL_OPENCODE_DIR")
+	if opencode == "" {
+		opencode = filepath.Join(home, ".strgl", "opencode")
+	}
 	return []source{
 		{harness: "claude-code", root: filepath.Join(claude, "projects"), parse: parseClaudeLine},
 		{harness: "codex", root: filepath.Join(codex, "sessions"), parse: parseCodexLine},
+		{harness: "opencode", root: opencode, parse: parseOpenCodeLine},
 	}
 }
 
@@ -221,6 +226,9 @@ func toHeartbeats(harness string, ev Event, state *State) []Heartbeat {
 	if hb, ok := toHeartbeat(harness, ev, state); ok {
 		beats = append(beats, hb)
 	}
+	if ev.End {
+		delete(state.OpenPrompt, ev.Session)
+	}
 	return beats
 }
 
@@ -231,7 +239,7 @@ func toHeartbeat(harness string, ev Event, state *State) (Heartbeat, bool) {
 		pending[0] += ev.InputTokens
 		pending[1] += ev.OutputTokens
 		state.Pending[ev.Session] = pending
-		if last, ok := state.LastSent[key]; ok && ev.Time.Sub(last) < minGap && ev.Time.After(last) {
+		if last, ok := state.LastSent[key]; ok && !ev.End && ev.Time.Sub(last) < minGap && ev.Time.After(last) {
 			return Heartbeat{}, false
 		}
 	}
