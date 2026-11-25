@@ -98,6 +98,7 @@ the newest chain head (a hash only) is sent to the server once per scan.
 ```sh
 strgl-collector timeline -project NAME            # turns and labels, no text
 strgl-collector bundle -project NAME > b.json     # exact upload bytes, not sent
+strgl-collector devlog -project NAME              # devlog draft to edit, not sent
 strgl-collector preview -project NAME -from 2026-11-01 -to 2026-11-07
 ```
 
@@ -105,6 +106,20 @@ strgl-collector preview -project NAME -from 2026-11-01 -to 2026-11-07
 device. Inspect each item, leave items out, add context or words to
 redact, then press Submit; only the bytes shown are uploaded. To answer a
 relabelling request, run preview again with `-supersedes DIGEST`.
+
+Redaction uses deterministic rules. An optional on-device entity model can
+also remove names the rules miss: pass `-ner CMD` or set
+`STRGL_NER_HELPER`. It is off by default, runs only for these commands, and
+withholds everything if it fails. See [ner/README.md](ner/README.md); no
+model meets the name target on every test set yet; the default is accepted
+as an opt-in layer below it.
+
+`devlog` (and the bottom of the preview page) drafts a devlog per day from
+the same redacted items the preview shows, leaving out anything you
+excluded: problems you investigated, files you changed yourself, test runs
+and what did not work. It shows no labels or proposed hours, only the
+activity estimate. The collector never uploads it; edit it, check it for
+names the redaction missed, and post it to your program yourself.
 
 The OpenCode plugin writes the text the evidence store needs to a separate
 spool (`~/.strgl/opencode-evidence`, or `$STRGL_OPENCODE_DIR/evidence`);

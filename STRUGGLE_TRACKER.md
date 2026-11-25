@@ -71,11 +71,19 @@ prompts during normal tracking.
 - **Local preview.** `strgl-collector preview -project NAME` serves a page on
   127.0.0.1 only. It shows the redacted bundle byte for byte, lets the user
   leave items out, add context and extra words to redact, and uploads only
-  the bytes whose SHA-256 it displayed. Redaction (`redact-v1.0`) replaces
-  secret formats, emails, phone numbers, IP addresses, home and project
-  paths with typed placeholders carrying a per-install salted hash. It fails
-  closed: an item that still matches after redaction is withheld. It is not
-  guaranteed anonymisation.
+  the bytes whose SHA-256 it displayed. Redaction (`redact-v1.2`) replaces
+  secret formats, emails, phone numbers (including UK numbers), UK postcodes, IP addresses, home and project
+  paths, and names, schools, places, handles, street addresses and birth
+  dates where the text announces them ("my name is", "Mr.", "Author:",
+  "… High School", "@handle"), with typed placeholders carrying a
+  per-install salted hash. It fails closed: an item that still matches after
+  redaction is withheld. It is not guaranteed anonymisation: names with no
+  such context are missed.
+- **Redaction recall** is measured by `TestRedactionRecall` on two annotated
+  corpora in `collector/testdata`: a development set the rules were written
+  against and a held-out set. Both are written by us, not real user prompts,
+  so the per-type floors guard against regressions rather than prove
+  real-world recall.
 - **Per-turn 0/1 labels** (rule set `struggle-v1.0`, `collector/labels.go`).
   Each label has a reason, signals, evidence item IDs, coverage and a
   needs-review flag. Diagnosis, new constraints, review questions and the
@@ -106,6 +114,23 @@ prompts during normal tracking.
   counts and evidence links that require review permission. The user's own
   copy leaves out reviewers' internal justifications; reviewers get the full
   block on the submission page.
+
+## v2 (in progress)
+
+- **Devlog drafts.** `strgl-collector devlog -project NAME`, and a box on
+  the preview page, draft a devlog per day from the redacted bundle:
+  problems investigated, the person's own edits, test runs and what did not
+  work. No labels or proposed hours appear in it. It stays on the device;
+  the user edits it and posts it to their program themselves.
+- **Optional entity model.** `-ner CMD` (or `STRGL_NER_HELPER`) runs a
+  user-installed named-entity model after the rules, through a separate
+  helper process (`collector/ner`). It is off by default and never part of
+  normal tracking. If it is enabled and fails, nothing is uploaded. With a
+  helper set, `TestRedactionRecall` requires 99% recall for secrets and
+  contact details and 90% for names, schools and places. The default,
+  `dslim/distilbert-NER`, is accepted as opt-in although it reaches only
+  80% for names and places on the newest held-out set (10 names, 5 places,
+  synthetic); the test records that shortfall explicitly.
 
 Not in v1: a stronger-model relabelling run (requesting relabelling returns
 the submission to the user), an on-device NER redaction model, and direct

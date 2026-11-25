@@ -91,8 +91,8 @@ func (s *Store) cleanEvidenceSpool(dir string, now time.Time) {
 }
 
 type evidenceFlags struct {
-	project, from, to, context, terms, exclude, supersedes, store string
-	retention                                                     time.Duration
+	project, from, to, context, terms, exclude, supersedes, store, ner string
+	retention                                                          time.Duration
 }
 
 func parseEvidenceFlags(name string, args []string, home string) (*flag.FlagSet, *evidenceFlags) {
@@ -106,6 +106,7 @@ func parseEvidenceFlags(name string, args []string, home string) (*flag.FlagSet,
 	fs.StringVar(&f.exclude, "exclude", "", "comma-separated evidence item IDs to leave out")
 	fs.StringVar(&f.supersedes, "supersedes", "", "digest of a submission returned for relabelling")
 	fs.StringVar(&f.store, "store", filepath.Join(home, ".strgl", "evidence.db"), "local evidence database")
+	fs.StringVar(&f.ner, "ner", os.Getenv("STRGL_NER_HELPER"), "optional entity-model helper command (see collector/ner); if it fails, nothing is built")
 	fs.DurationVar(&f.retention, "retention", 30*24*time.Hour, "keep local evidence content this long")
 	_ = fs.Parse(args)
 	return fs, f
@@ -138,7 +139,7 @@ func (f *evidenceFlags) options(now time.Time) (BuildOptions, error) {
 	return opt, nil
 }
 
-// runEvidenceCommand handles the timeline, bundle and preview
+// runEvidenceCommand handles the timeline, bundle, devlog and preview
 // subcommands. It returns false when args name no such command.
 func runEvidenceCommand(args []string, home, cfgPath string) bool {
 	if len(args) == 0 {
@@ -146,7 +147,7 @@ func runEvidenceCommand(args []string, home, cfgPath string) bool {
 	}
 	cmd := args[0]
 	switch cmd {
-	case "timeline", "bundle", "preview":
+	case "timeline", "bundle", "preview", "devlog":
 	default:
 		return false
 	}
@@ -164,6 +165,14 @@ func runEvidenceCommand(args []string, home, cfgPath string) bool {
 	opt, err := f.options(now)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if f.ner != "" && cmd != "timeline" {
+		h, err := StartNER(f.ner)
+		if err != nil {
+			log.Fatalf("%v; nothing was built, because the entity model you enabled is not available", err)
+		}
+		defer h.Close()
+		opt.NER = h
 	}
 	switch cmd {
 	case "timeline":
@@ -199,6 +208,13 @@ func runEvidenceCommand(args []string, home, cfgPath string) bool {
 		data, digest := b.Encode()
 		os.Stdout.Write(data)
 		fmt.Fprintf(os.Stderr, "sha256 %s\n", digest)
+	case "devlog":
+		requireProject(opt)
+		b, err := store.BuildBundle(opt)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Print(DraftDevlog(b, time.Local))
 	case "preview":
 		requireProject(opt)
 		apiURL, apiKey := readConfig(cfgPath)
