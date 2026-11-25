@@ -1,0 +1,22 @@
+[
+  {"text": "yo its kofi, my flask app returns 500 when i submit the form and idk why", "sensitive": [{"type": "PERSON", "value": "kofi"}], "keep": ["flask app returns 500", "submit the form"]},
+  {"text": "I'm Wei Zhang and I'm in year 10 at Kingsway Secondary School in Mississauga", "sensitive": [{"type": "PERSON", "value": "Wei"}, {"type": "PERSON", "value": "Zhang"}, {"type": "SCHOOL", "value": "Kingsway"}, {"type": "PLACE", "value": "Mississauga"}], "keep": ["year 10"]},
+  {"text": "console.log('Welcome back, Sienna!') should only show after login", "sensitive": [{"type": "PERSON", "value": "Sienna"}], "keep": ["console.log(", "should only show after login"]},
+  {"text": "Dijkstra's algorithm is too slow on my 1000x1000 grid, should I use A* instead?", "sensitive": [], "keep": ["Dijkstra's algorithm", "1000x1000 grid", "A* instead"]},
+  {"text": "the club meets in Bristol every tuesday, can the bot remind people at 5pm", "sensitive": [{"type": "PLACE", "value": "Bristol"}], "keep": ["remind people at 5pm"]},
+  {"text": "my discord bot crashes with discord.errors.Forbidden: 403 Forbidden (error code: 50013)", "sensitive": [], "keep": ["discord.errors.Forbidden", "50013"]},
+  {"text": "Co-authored-by: Ana Lucia Torres <ana.torres@school.edu>", "sensitive": [{"type": "PERSON", "value": "Ana Lucia Torres"}, {"type": "EMAIL", "value": "ana.torres@school.edu"}], "keep": []},
+  {"text": "use the Django admin to add a user called mohammed_k for testing", "sensitive": [{"type": "HANDLE", "value": "mohammed_k"}], "keep": ["Django admin", "for testing"]},
+  {"text": "ssh pi@10.0.0.17 asks for a password, the password is raspberry123", "sensitive": [{"type": "IP", "value": "10.0.0.17"}, {"type": "SECRET", "value": "raspberry123"}], "keep": ["asks for a password"]},
+  {"text": "export const AUTHOR = { name: 'Isabelle Dupont', github: 'izzydupont' }", "sensitive": [{"type": "PERSON", "value": "Isabelle"}, {"type": "PERSON", "value": "Dupont"}], "keep": ["export const AUTHOR"]},
+  {"text": "Our robotics team is from Nairobi and our mentor Mr. Otieno wants a dashboard", "sensitive": [{"type": "PLACE", "value": "Nairobi"}, {"type": "PERSON", "value": "Otieno"}], "keep": ["robotics team", "wants a dashboard"]},
+  {"text": "Gaussian blur in my image filter makes everything grey, is the kernel normalised?", "sensitive": [], "keep": ["Gaussian blur", "is the kernel normalised?"]},
+  {"text": "anthropic key sk-ant-api03-Qw8Er7Ty6Ui5Op4As3Df2Gh1Jk0Lz9Xc8Vb7Nm6 stopped working", "sensitive": [{"type": "SECRET", "value": "sk-ant-api03-Qw8Er7Ty6Ui5Op4As3Df2Gh1Jk0Lz9Xc8Vb7Nm6"}], "keep": ["stopped working"]},
+  {"text": "deliver to Flat 3, 27 Oakfield Road, Manchester M14 6AB for the order form test", "sensitive": [{"type": "ADDRESS", "value": "27 Oakfield Road"}, {"type": "PLACE", "value": "Manchester"}, {"type": "ADDRESS", "value": "M14 6AB"}], "keep": ["order form test"]},
+  {"text": "Rust borrow checker says cannot borrow `self.items` as mutable more than once", "sensitive": [], "keep": ["cannot borrow `self.items` as mutable"]},
+  {"text": "my sister Leila made the logo, credit her in the footer", "sensitive": [{"type": "PERSON", "value": "Leila"}], "keep": ["made the logo", "credit her in the footer"]},
+  {"text": "my phone is 07911 123456, put it on the contact page please", "sensitive": [{"type": "PHONE", "value": "07911 123456"}], "keep": ["contact page"]},
+  {"text": "Svelte 5 runes: $state inside a .svelte.ts file isn't reactive for me", "sensitive": [], "keep": ["Svelte 5 runes", "$state inside a .svelte.ts file"]},
+  {"text": "date of birth: 14/02/2010 is what the form should reject as under 16", "sensitive": [{"type": "DOB", "value": "14/02/2010"}], "keep": ["under 16"]},
+  {"text": "Hi, I'm Tomás from Buenos Aires, my Pong clone ball goes through the paddle", "sensitive": [{"type": "PERSON", "value": "Tomás"}, {"type": "PLACE", "value": "Buenos Aires"}], "keep": ["Pong clone", "goes through the paddle"]}
+]

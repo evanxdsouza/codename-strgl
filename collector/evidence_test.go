@@ -124,6 +124,24 @@ func TestTimelineTurnsEvidenceAndRedactedBundle(t *testing.T) {
 	if it := b2.Turns[0].Items[0]; it.Status != "excluded" || it.Text != "" || it.Commitment == "" {
 		t.Fatalf("excluded item: %+v", it)
 	}
+
+	// The devlog draft summarises the diagnosis, keeps the failed test run
+	// as part of the work and never shows labels or proposed hours.
+	draft := DraftDevlog(b, time.UTC)
+	for _, want := range []string{"- why does add() fail in calc.py?\n", "1 failing, 0 passing", "stopped the agent 1 time", "about 1 min, an estimate"} {
+		if !strings.Contains(draft, want) {
+			t.Fatalf("draft lacks %q:\n%s", want, draft)
+		}
+	}
+	for _, unwanted := range []string{"try again", "label", "productive", "kid@example.com"} {
+		if strings.Contains(strings.ToLower(draft), unwanted) {
+			t.Fatalf("draft contains %q:\n%s", unwanted, draft)
+		}
+	}
+	// An item the user left out of the bundle is left out of the draft too.
+	if strings.Contains(DraftDevlog(b2, time.UTC), "why does add()") {
+		t.Fatal("draft shows an excluded prompt")
+	}
 }
 
 func TestRedactionFailsClosedAndUserTerms(t *testing.T) {
@@ -295,6 +313,20 @@ func TestScanSnapshotsAttributeAgentAndHumanChanges(t *testing.T) {
 	}
 	if contains(labels[0].Signals, "human_edit_between_turns") {
 		t.Fatal("the agent's edit was credited as the person's")
+	}
+
+	// The agent then writes the test during the person's turn. The devlog
+	// credits only calc.py as changed by hand.
+	write(t, filepath.Join(root, "test_calc.py"), "from calc import neg", "assert neg(2) == -2")
+	appendLines(claudeLine("assistant", 290, root, `,"message":{"model":"m","role":"assistant","content":[{"type":"text","text":"added"}]}`))
+	scanAt(291)
+	b, err := store.BuildBundle(BuildOptions{Project: filepath.Base(root), From: t0.Add(-time.Hour), To: t0.Add(time.Hour), Now: t0.Add(300 * time.Second)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	draft := DraftDevlog(b, time.UTC)
+	if !strings.Contains(draft, "Changed by hand: calc.py\n") || !strings.Contains(draft, "test_calc.py") {
+		t.Fatalf("draft:\n%s", draft)
 	}
 }
 

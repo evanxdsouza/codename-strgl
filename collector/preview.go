@@ -69,6 +69,7 @@ func servePreview(store *Store, base BuildOptions, apiURL, apiKey string) error 
 		page := previewPage{Token: token, Error: errString(err), Form: r.Form}
 		if err == nil {
 			page.Bundle, page.Digest, page.Size, page.Raw = b, digest, len(data), string(data)
+			page.Devlog = DraftDevlog(b, time.Local)
 		}
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'")
 		_ = previewTemplate.Execute(w, page)
@@ -135,6 +136,7 @@ type previewPage struct {
 	Token, Digest, Raw, Error string
 	Size                      int
 	Bundle                    *Bundle
+	Devlog                    string
 	Form                      map[string][]string
 }
 
@@ -213,5 +215,8 @@ textarea,input[type=text]{width:100%;box-sizing:border-box}
 <p>{{.Size}} bytes, sha256 <code>{{.Digest}}</code>. <a href="/bundle.json?t={{.Token}}&amp;digest={{.Digest}}">View the raw JSON</a>.</p>
 <form method="post" action="/submit?t={{.Token}}"><input type="hidden" name="digest" value="{{.Digest}}"><button type="submit">Submit these exact bytes</button></form>
 <details><summary>Raw JSON</summary><pre>{{.Raw}}</pre></details>
+<h2>Devlog draft</h2>
+<p>Written from the redacted items above, for you to edit and post to your program yourself. It is not part of the upload and is never sent by the collector. Check it for names the redaction missed.</p>
+<textarea rows="16" aria-label="Devlog draft">{{.Devlog}}</textarea>
 {{end}}
 </body></html>`))

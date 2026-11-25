@@ -117,11 +117,15 @@ func contentAt(root string, snap *Snapshot, name string) (string, bool) {
 	return string(out), true
 }
 
+// changedFilesPrefix starts every change item; DraftDevlog reads the file
+// names after it.
+const changedFilesPrefix = "Files changed since the previous scan: "
+
 // diffEvidence shows what changed in each file between two scans, not
 // against HEAD, so earlier changes by someone else are not repeated.
 func diffEvidence(root string, before, after *Snapshot, files []string) string {
 	var b strings.Builder
-	b.WriteString("Files changed since the previous scan: " + strings.Join(files, ", ") + "\n")
+	b.WriteString(changedFilesPrefix + strings.Join(files, ", ") + "\n")
 	if before.Head != after.Head {
 		b.WriteString("HEAD moved to " + after.Head + " since the previous scan (a commit was made or checked out).\n")
 	}

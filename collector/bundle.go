@@ -109,7 +109,8 @@ type BuildOptions struct {
 	Exclude     map[string]bool // item IDs
 	UserContext string
 	Supersedes  string
-	Terms       []string // extra words to redact
+	Terms       []string   // extra words to redact
+	NER         *NERHelper // optional entity model the user enabled
 	Now         time.Time
 }
 
@@ -136,18 +137,18 @@ func (s *Store) BuildBundle(opt BuildOptions) (*Bundle, error) {
 			paths[t.root] = "<" + t.Project + ">"
 		}
 	}
-	r := NewRedactor(s, opt.Terms).WithPaths(paths)
+	r := NewRedactor(s, opt.Terms).WithPaths(paths).WithNER(opt.NER)
 	userContext, _, ok := r.Redact(opt.UserContext)
 	if !ok {
 		return nil, fmt.Errorf("the added context still contains text that looks sensitive after redaction; edit it and try again")
 	}
 	b := &Bundle{
 		Schema: BundleSchema, CollectorVersion: version, DeviceID: s.DeviceID, KeyProtection: s.KeyProtection,
-		RuleSet: RuleSetVersion, RedactionVersion: RedactionVersion, Project: opt.Project,
+		RuleSet: RuleSetVersion, RedactionVersion: r.Version(), Project: opt.Project,
 		From: opt.From.UnixMilli(), To: opt.To.UnixMilli(), CreatedAt: opt.Now.UnixMilli(),
 		UserContext: userContext, Supersedes: opt.Supersedes, Turns: []BundleTurn{},
 		Notes: []string{
-			"Automated redaction (" + RedactionVersion + ") replaces common secret formats and contact details with typed placeholders. It is not guaranteed anonymisation.",
+			"Automated redaction (" + r.Version() + ") replaces common secret formats and contact details with typed placeholders. It is not guaranteed anonymisation.",
 			"Only file changes are observed when no prompt is sent: reading, research and thinking leave no trace the collector sees, and changes by an AI assistant inside an editor look like the person's own.",
 			"Commitments are salted hashes of the raw items, recorded on the device when the items were captured. They protect against later alteration, not against a modified client.",
 		},
