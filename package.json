@@ -23,7 +23,7 @@
     "@tailwindcss/vite": "^4.3.5",
     "@tsconfig/svelte": "^5.0.9",
     "beasties": "^0.5.4",
-    "bits-ui": "^2.21.0",
+    "bits-ui": "^2.22.0",
     "blume": "^2.2.7",
     "canvas-confetti": "^1.9.4",
     "d3-array": "3.2.4",
