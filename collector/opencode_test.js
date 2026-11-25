@@ -103,7 +103,9 @@ test("OpenCode records metadata, not compaction or child instructions as human p
   t.after(cleanup);
   await drained.promise;
   await cleanup();
-  const files = await readdir(directory);
+  const files = (await readdir(directory)).filter((file) =>
+    file.endsWith(".jsonl"),
+  );
   const content = (
     await Promise.all(
       files.map((file) => readFile(join(directory, file), "utf8")),
@@ -152,6 +154,46 @@ test("OpenCode records metadata, not compaction or child instructions as human p
   if (process.platform !== "win32") {
     assert.equal((await stat(join(directory, files[0]))).mode & 0o777, 0o600);
   }
+
+  // The separate local evidence spool keeps text for the encrypted store.
+  const evidenceDirectory = join(directory, "evidence");
+  const evidence = (
+    await Promise.all(
+      (await readdir(evidenceDirectory)).map((file) =>
+        readFile(join(evidenceDirectory, file), "utf8"),
+      ),
+    )
+  )
+    .join("")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.deepEqual(
+    evidence
+      .filter((record) => record.kind === "prompt")
+      .map((record) => record.text),
+    ["fix 🦀"],
+  );
+  const child = evidence.find(
+    (record) => record.session_id === "ses_child" && record.text,
+  );
+  assert.equal(child.kind, "response");
+  assert.equal(child.parent_id, "ses_parent");
+  assert.equal(
+    evidence.find((record) => record.kind === "tool_call").input.command,
+    "echo secret-token-123",
+  );
+  assert(!evidence.some((record) => record.text === "secret-token-123"));
+  assert.deepEqual(
+    evidence
+      .filter((record) => record.kind === "end")
+      .map((record) => [record.session_id, record.interrupted])
+      .sort(),
+    [
+      ["ses_child", true],
+      ["ses_parent", false],
+    ],
+  );
 });
 
 test("OpenCode samples quiet active runs, stops at idle and stops if its event stream closes", async (t) => {

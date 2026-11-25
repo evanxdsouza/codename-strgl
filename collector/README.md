@@ -14,7 +14,7 @@ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o s
 ```
 
 Use `GOOS=darwin` or `GOOS=linux` and `GOARCH=arm64`, `amd64` or `386` for
-other machines. Go 1.22 or later.
+other machines. Go 1.26 or later (for the pure-Go SQLite driver; still no cgo).
 
 ## Set up
 
@@ -34,6 +34,10 @@ strgl-collector            # scans every minute
 strgl-collector -once      # scan once and exit
 strgl-collector -dry-run   # print what would be sent, send nothing
 ```
+
+It also records a local turn timeline with encrypted evidence (see
+"Evidence and submissions" below); `-evidence=false` turns that off and
+`-local-only` records it without sending heartbeats or anchors.
 
 On first run it reads the last 7 days (`-backfill`). Read positions are kept
 in `~/.strgl/state.json`, so restarting does not send anything twice. Start it
@@ -82,14 +86,44 @@ directory in both OpenCode's and the collector's environments. Files are
 created with mode `0600` and the directory with `0700` on POSIX systems;
 Windows uses the account's filesystem permissions.
 
+## Evidence and submissions
+
+Each scan also adds what the harnesses wrote to `~/.strgl/evidence.db`: one
+turn per human prompt, with the prompt, replies, tool calls and outputs, and
+the diffs the collector saw in the repository. Text is encrypted at rest.
+Turns read from transcripts more than 10 minutes after the fact are marked
+backfilled. Each stored item gets a salted commitment in a hash chain, and
+the newest chain head (a hash only) is sent to the server once per scan.
+
+```sh
+strgl-collector timeline -project NAME            # turns and labels, no text
+strgl-collector bundle -project NAME > b.json     # exact upload bytes, not sent
+strgl-collector preview -project NAME -from 2026-11-01 -to 2026-11-07
+```
+
+`preview` prints a `http://127.0.0.1:…/?t=…` link that only works on this
+device. Inspect each item, leave items out, add context or words to
+redact, then press Submit; only the bytes shown are uploaded. To answer a
+relabelling request, run preview again with `-supersedes DIGEST`.
+
+The OpenCode plugin writes the text the evidence store needs to a separate
+spool (`~/.strgl/opencode-evidence`, or `$STRGL_OPENCODE_DIR/evidence`);
+the collector deletes those files two days after reading them. Set
+`STRGL_OPENCODE_EVIDENCE=0` in OpenCode's environment to stop it.
+
 ## What is sent and what stays local
 
 Sent, per heartbeat: time, project, branch, harness name and version,
 `actor`, model name, session ID, token counts, the length of a prompt as a
 number, operating system and machine name.
 
-Never sent: prompt text, model replies, tool calls and their output, file
-paths and file contents. Claude Code and Codex transcripts are read locally
+Also sent: one evidence chain head (a SHA-256 hash) per scan.
+
+Sent only when you press Submit in `preview`: the redacted bundle the
+preview showed.
+
+Never sent otherwise: prompt text, model replies, tool calls and their
+output, file paths and file contents. Claude Code and Codex transcripts are read locally
 to tell lines apart. The OpenCode plugin copies no text at all: its local
 spool contains only timestamps, actors, numeric lengths and token counts,
 session/model/version identifiers and the working directory for project
@@ -128,5 +162,17 @@ Node.js 22 or later is only needed for the plugin's tests.
   edit files yourself. While the agent is still running 2 minutes after a
   prompt, the collector sends an extra agent heartbeat at exactly that point
   so the server's credit window ends on time.
-- Not yet tested on a real Windows or macOS machine; the binaries were only
-  cross-compiled.
+- Not yet tested on a real Windows or macOS machine; the binaries, including
+  the DPAPI and Keychain key storage, were only cross-compiled.
+- File changes are attributed per scan (one minute by default), not per
+  keystroke. Changes made while no agent runs go to your next prompt in that
+  repository if it comes within 10 minutes. Otherwise, once the repository
+  has been quiet for 10 minutes, they become a standalone "editor" turn that
+  credits at most the two-minute estimate, rests on the file changes alone,
+  is labelled with partial coverage and always needs a reviewer. Only
+  repositories with an agent turn in the last 24 hours (at most 8) are
+  watched, so editing in a repository you have never prompted an agent in is
+  not captured. Reading, research and thinking leave no trace; changes made
+  by an AI assistant inside your editor look like your own.
+- Claude Code does not record exit codes; a failing tool result counts as an
+  error, a successful one as passing.

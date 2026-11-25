@@ -112,6 +112,25 @@ class User < ApplicationRecord
   end
 
   def can_convict_users? = admin_level_superadmin? || admin_level_ultraadmin?
+
+  # Struggle tracker review. Normal reviewers see submitted evidence; escalated
+  # evidence is only for the fraud squad and SupaAdmins (superadmin and
+  # ultraadmin).
+  enum :struggle_role, { none: "none", reviewer: "reviewer", fraud_squad: "fraud_squad" }, prefix: :struggle_role
+  def can_review_struggle? = struggle_role_reviewer? || can_view_escalated_struggle?
+  def can_view_escalated_struggle? = struggle_role_fraud_squad? || admin_level_superadmin? || admin_level_ultraadmin?
+
+  # Only SupaAdmins grant or remove struggle review roles, never their own.
+  def set_struggle_role(role, changed_by_user:)
+    return false unless changed_by_user.is_a?(User) && changed_by_user != self
+    return false unless changed_by_user.admin_level_superadmin? || changed_by_user.admin_level_ultraadmin?
+    return false unless self.class.struggle_roles.key?(role.to_s)
+
+    previous = struggle_role
+    update!(struggle_role: role.to_s)
+    Rails.logger.info("struggle_role of user #{id} changed from #{previous} to #{role} by user #{changed_by_user.id}")
+    true
+  end
   def can_leaderboard_shadowban_users? = admin_level.in?(%w[admin superadmin ultraadmin])
   def can_view_query_stats? = admin_level.in?(%w[viewer admin superadmin ultraadmin])
   def admin_level_rank = ADMIN_LEVEL_RANK[admin_level.to_s] || 0
@@ -200,6 +219,8 @@ class User < ApplicationRecord
   has_many :sign_in_tokens, dependent: :destroy
   has_many :project_repo_mappings
   has_many :project_corrections
+  has_many :struggle_submissions
+  has_many :struggle_anchors
 
   has_many :api_keys
   has_many :admin_api_keys, dependent: :destroy

@@ -2491,6 +2491,189 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Error"
+  "/api/v1/struggle/anchors":
+    post:
+      summary: Anchor an evidence chain head
+      tags:
+      - Struggle Tracker
+      description: Sent by strgl-collector to timestamp its local evidence chain.
+        Carries a SHA-256 head only, never content. Repeating the same head is idempotent;
+        a different head for the same device and sequence number is refused. Authenticate
+        with an API key as a Bearer token (HTTP Basic auth with the API key is also
+        accepted).
+      security:
+      - Bearer: []
+      parameters: []
+      responses:
+        '201':
+          description: anchored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 7
+                  received_at:
+                    type: string
+                    format: date_time
+                    example: '2026-11-21T06:00:00Z'
+                required:
+                - id
+                - received_at
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_id:
+                  type: string
+                  example: dev_3f1a9c0b2e4d6f8a1b2c3d4e
+                seq:
+                  type: integer
+                  format: int64
+                  example: 42
+                  description: Sequence number of the newest chain entry the head
+                    covers.
+                head:
+                  type: string
+                  example: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                  description: Hex SHA-256 chain head after entry `seq`.
+              required:
+              - device_id
+              - seq
+              - head
+  "/api/v1/struggle/submissions":
+    post:
+      summary: Submit a redacted evidence bundle
+      tags:
+      - Struggle Tracker
+      description: Uploads the exact bytes the user previewed locally with `strgl-collector
+        preview`. The server re-derives every total from the turns, checks each included
+        item against the submitted evidence chain and any earlier anchors, freezes
+        the bundle and records which turns it claims, so the same turn is never credited
+        twice. Retrying the same bytes returns the existing submission with 200. Authenticate
+        with an API key as a Bearer token.
+      security:
+      - Bearer: []
+      parameters:
+      - name: X-Bundle-Digest
+        in: header
+        required: false
+        description: Hex SHA-256 of the body as the collector computed it. A mismatch
+          is rejected.
+        schema:
+          type: string
+      responses:
+        '201':
+          description: submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 12
+                  digest:
+                    type: string
+                    example: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                  status:
+                    type: string
+                    example: submitted
+                  project:
+                    type: string
+                    example: calcs
+                  estimated_human_seconds:
+                    type: integer
+                    example: 240
+                  proposed_productive_seconds:
+                    type: integer
+                    example: 120
+                  claimable_seconds:
+                    type: integer
+                    example: 120
+                  duplicate_seconds:
+                    type: integer
+                    example: 0
+                  chain_status:
+                    type: string
+                    example: verified
+                    enum:
+                    - verified
+                    - unanchored
+                    - mismatch
+                    - empty
+                  supersedes_digest:
+                    type: string
+                    nullable: true
+                required:
+                - id
+                - digest
+                - status
+                - project
+                - estimated_human_seconds
+                - proposed_productive_seconds
+                - claimable_seconds
+                - duplicate_seconds
+                - chain_status
+        '422':
+          description: invalid bundle
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Bundle format version 1, documented in collector/bundle.go.
+              properties:
+                schema:
+                  type: integer
+                  example: 1
+                project:
+                  type: string
+                  example: calcs
+                from:
+                  type: integer
+                  format: int64
+                  description: Range start, Unix milliseconds
+                to:
+                  type: integer
+                  format: int64
+                  description: Range end (exclusive), Unix milliseconds
+                totals:
+                  type: object
+                turns:
+                  type: array
+                  items:
+                    type: object
+                chain:
+                  type: object
+              required:
+              - schema
+              - project
+              - from
+              - to
+              - totals
+              - turns
+              - chain
   "/api/v1/users/lookup_email/{email}":
     get:
       summary: Lookup user by email

@@ -21,9 +21,21 @@ class ProjectJustification
 
   # from and to are dates in the user's time zone, both inclusive. projects
   # nil means every project with activity in the range.
-  def initialize(user:, from:, to:, projects: nil, base_url: nil)
-    @user, @from, @to, @base_url = user, from, to, base_url
+  # reviewer_view includes reviewers' internal justifications, which the
+  # user's own export leaves out.
+  def initialize(user:, from:, to:, projects: nil, base_url: nil, reviewer_view: false)
+    @user, @from, @to, @base_url, @reviewer_view = user, from, to, base_url, reviewer_view
     @projects = projects.presence
+  end
+
+  # Live struggle tracker submissions overlapping the range, oldest first.
+  def submissions
+    @submissions ||= begin
+      scope = user.struggle_submissions.live.includes(:decided_by)
+        .where("range_start < ? AND range_end > ?", Time.at(time_range.end), Time.at(time_range.begin)).order(:range_start, :id)
+      scope = scope.where(project: projects) if projects
+      scope.to_a
+    end
   end
 
   def time_range
@@ -69,13 +81,14 @@ class ProjectJustification
     [
       struggle_tracker_section,
       "[ALTERNATE TRACKING METHOD]\nHours come from the open source tracker codename-strgl (#{REPO_URL}), a fork of Hackatime, not from Hackatime itself. " \
-        "Its collector reads Claude Code and Codex transcripts on the user's machine, attributes activity to a project by git root and working directory, " \
+        "Its collector reads Claude Code and Codex transcripts and OpenCode plugin events on the user's machine, attributes activity to a project by git root and working directory, " \
         "and marks each heartbeat as human or agent. Agent-running time is counted separately. Prompt text never leaves the user's machine.",
       "[SPECIFIC TECHNICAL FEATURES]\n(specific technical features)",
       "[PROJECT REVIEW]\n(reviewer justification)",
-      "[DEFLATION JUSTIFICATION]\n(only if hours were cut: hours deflated to, and why)",
+      deflation_section,
       "[UPDATE JUSTIFICATION]\n(only for updates: hours since the previous submission, link to the earlier one)",
       sessions_section,
+      struggle_review_section,
       ai_usage_section,
       commits_section,
       corrections_section,
@@ -152,7 +165,7 @@ class ProjectJustification
       [AI USAGE]
       #{prompts} prompts across #{sessions.length} sessions. Sessions with agent time and no human time: #{agent_only} (counted as agent time only).
       Models: #{models.presence&.join(", ") || "none reported"}.
-      Per-turn labels are not available in rule set #{RULE_SET}.
+      #{turn_label_line}
     TEXT
   end
 
@@ -204,8 +217,64 @@ class ProjectJustification
       end
       "#{project}: #{page}#{" Repo: #{mapping.repo_url}" if mapping&.repo_url.present?}"
     end
-    "[LINKS]\n#{lines.join("\n")}\nEvidence: not collected in rule set #{RULE_SET}.".sub("[LINKS]\n\n", "[LINKS]\n")
+    "[LINKS]\n#{lines.join("\n")}\n#{evidence_links}".sub("[LINKS]\n\n", "[LINKS]\n")
   end
+
+  def turn_label_line
+    return "Per-turn labels are not available in rule set #{RULE_SET}." if submissions.empty?
+
+    turns = submissions.sum(&:turns_count)
+    "Per-turn labels from submitted evidence (#{submissions.map(&:rule_set).uniq.join(", ")}): #{submissions.sum(&:labelled_one_count)} of #{turns} turns " \
+      "labelled productive, #{submissions.sum(&:needs_review_count)} flagged for review, #{submissions.sum(&:backfilled_count)} backfilled."
+  end
+
+  def struggle_review_section
+    return "[STRUGGLE REVIEW]\nNo evidence bundles were submitted for this range; the hours above are activity estimates only." if submissions.empty?
+
+    lines = submissions.each_with_index.map do |submission, index|
+      decision = case submission.status
+      when "approved", "adjusted", "rejected"
+        "#{submission.status} #{hours(submission.approved_seconds)} by #{reviewer_label(submission.decided_by)} at #{time_label(submission.decided_at.to_f)}"
+      else
+        submission.status.tr("_", " ")
+      end
+      "[#{index + 1}] #{submission.project} #{time_label(submission.range_start.to_f)}-#{time_label(submission.range_end.to_f)}: " \
+        "estimated #{hours(submission.estimated_human_seconds)} human activity, proposed #{hours(submission.proposed_productive_seconds)} " \
+        "(#{submission.labelled_one_count} of #{submission.turns_count} turns labelled 1, rule set #{submission.rule_set}), " \
+        "claimable #{hours(submission.claimable_seconds)} after #{hours(submission.duplicate_seconds)} already credited, decision: #{decision}. " \
+        "Evidence chain #{submission.chain_status} (#{submission.chain_anchors_matched} anchors). Bundle sha256 #{submission.digest}."
+    end
+    approved = submissions.select(&:decided?).sum(&:approved_seconds)
+    <<~TEXT.chomp
+      [STRUGGLE REVIEW]
+      Estimated activity, proposed productive time and reviewer-approved time are separate numbers. Only approved hours are settled.
+      #{lines.join("\n")}
+      Approved by tracker reviewers: #{hours(approved)}. Awaiting a decision: #{submissions.count { |s| !s.decided? }}.
+    TEXT
+  end
+
+  def deflation_section
+    cut = submissions.select { |s| s.decided? && s.approved_seconds < s.claimable_seconds }
+    return "[DEFLATION JUSTIFICATION]\n(only if hours were cut: hours deflated to, and why)" if cut.empty?
+
+    lines = cut.map do |submission|
+      reason = @reviewer_view ? submission.reviewer_justification : "the reviewer's reasons are in the linked review record"
+      "#{submission.project}: #{hours(submission.claimable_seconds)} claimable deflated to #{hours(submission.approved_seconds)}; #{reason}"
+    end
+    "[DEFLATION JUSTIFICATION]\n#{lines.join("\n")}"
+  end
+
+  def evidence_links
+    return "Evidence: not collected in rule set #{RULE_SET}." if submissions.empty?
+
+    links = submissions.map do |submission|
+      path = Rails.application.routes.url_helpers.review_struggle_submission_path(submission)
+      "#{submission.project}: #{@base_url}#{path} (authorised reviewers only; every view is logged; sha256 #{submission.digest.first(16)})"
+    end
+    "Evidence:\n#{links.join("\n")}"
+  end
+
+  def reviewer_label(reviewer) = reviewer&.username.present? ? "@#{reviewer.username}" : "reviewer #{reviewer&.id}"
 
   def account_label = user.username.present? ? "@#{user.username} (tracker user ID #{user.id})" : "tracker user ID #{user.id}"
   def local_date(epoch) = Time.at(epoch).in_time_zone(user.timezone).to_date

@@ -4,14 +4,26 @@ import { appendFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-// OpenCode v2 local server plugin. Only metadata is written to the spool;
-// prompts, responses, tool inputs and outputs are never copied or uploaded.
+// OpenCode v2 local server plugin. The metadata spool holds no text and is
+// what heartbeats are built from. A separate local evidence spool holds the
+// prompt, response and tool text the collector encrypts into its evidence
+// store; it never leaves the device. Set STRGL_OPENCODE_EVIDENCE=0 to turn
+// the evidence spool off.
 export default {
   id: "strgl-collector",
   async setup(ctx) {
     const directory =
       process.env.STRGL_OPENCODE_DIR || join(homedir(), ".strgl", "opencode");
     await mkdir(directory, { recursive: true, mode: 0o700 });
+    const evidenceOn = process.env.STRGL_OPENCODE_EVIDENCE !== "0";
+    const evidenceDirectory =
+      process.env.STRGL_OPENCODE_EVIDENCE_DIR ||
+      (process.env.STRGL_OPENCODE_DIR
+        ? join(process.env.STRGL_OPENCODE_DIR, "evidence")
+        : join(homedir(), ".strgl", "opencode-evidence"));
+    if (evidenceOn) {
+      await mkdir(evidenceDirectory, { recursive: true, mode: 0o700 });
+    }
     const sessions = new Map();
     const controller = new AbortController();
     let pending = Promise.resolve();
@@ -46,6 +58,91 @@ export default {
       );
     }
 
+    // One file per session per UTC day, so the collector can delete fully
+    // read plaintext files once they are old.
+    async function evidence(sessionID, session, event, fields) {
+      if (!evidenceOn) return;
+      const record = {
+        schema: 1,
+        session_id: sessionID,
+        parent_id: session.parentID,
+        cwd: session.directory,
+        model: session.model,
+        version: ctx.app.version,
+        timestamp: event.created,
+        sequence: event.durable?.seq,
+        ...fields,
+      };
+      const day = new Date(event.created).toISOString().slice(0, 10);
+      await appendFile(
+        join(
+          evidenceDirectory,
+          `${day}-${encodeURIComponent(sessionID)}.jsonl`,
+        ),
+        JSON.stringify(record) + "\n",
+        { encoding: "utf8", mode: 0o600 },
+      );
+    }
+
+    function toolText(content) {
+      return (content || [])
+        .filter((part) => part.type === "text")
+        .map((part) => part.text)
+        .join("\n");
+    }
+
+    async function recordEvidence(event, sessionID, session) {
+      const { data } = event;
+      switch (event.type) {
+        case "session.inbox.enqueued":
+          if (data.item.type !== "user") return;
+          // A child's user-role text is an agent's instruction, not a prompt.
+          return evidence(sessionID, session, event, {
+            kind: session.parentID ? "response" : "prompt",
+            text: data.item.payload.text,
+          });
+        case "session.text.ended":
+          return evidence(sessionID, session, event, {
+            kind: "response",
+            text: data.text,
+          });
+        case "session.tool.called":
+          return evidence(sessionID, session, event, {
+            kind: "tool_call",
+            tool: session.tools.get(data.id),
+            tool_id: data.id,
+            input: data.input,
+          });
+        case "session.tool.input.started":
+          session.tools.set(data.id, data.name);
+          return;
+        case "session.tool.success":
+        case "session.tool.failed":
+          return evidence(sessionID, session, event, {
+            kind: "tool_output",
+            tool: session.tools.get(data.id),
+            tool_id: data.id,
+            text: toolText(data.content) || data.error?.message || "",
+            exit: data.metadata?.exit,
+            failed: event.type === "session.tool.failed",
+          });
+        case "session.execution.succeeded":
+        case "session.execution.failed":
+        case "session.execution.interrupted":
+          return evidence(sessionID, session, event, {
+            kind: "end",
+            interrupted: event.type === "session.execution.interrupted",
+          });
+        case "session.step.ended":
+        case "session.step.failed":
+          return evidence(sessionID, session, event, {
+            kind: "agent",
+            input_tokens: data.tokens?.input,
+            output_tokens: data.tokens?.output,
+          });
+      }
+    }
+
     async function observe(event) {
       const { sessionID } = event.data;
       if (!sessionID) return;
@@ -57,6 +154,7 @@ export default {
           parentID: info.parentID,
           model: info.model?.id,
           running: false,
+          tools: new Map(),
         };
         sessions.set(sessionID, session);
       }
@@ -70,6 +168,13 @@ export default {
         event_id: event.id,
         sequence: event.durable?.seq,
       };
+      await recordEvidence(event, sessionID, session);
+      if (
+        event.type === "session.text.ended" ||
+        event.type === "session.tool.input.started"
+      ) {
+        return; // evidence only
+      }
 
       switch (event.type) {
         case "session.inbox.enqueued": {
@@ -120,6 +225,7 @@ export default {
           "session.step.started",
           "session.step.ended",
           "session.step.failed",
+          "session.tool.input.started",
           "session.tool.called",
           "session.tool.success",
           "session.tool.failed",
@@ -127,6 +233,7 @@ export default {
           "session.compaction.ended",
           "session.compaction.failed",
           "session.idle",
+          "session.text.ended",
           "session.moved",
           "session.model.selected",
         ],

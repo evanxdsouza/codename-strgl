@@ -159,6 +159,16 @@ Rails.application.routes.draw do
   get "my/lookback", to: "my/lookback#show", as: :my_lookback, export: true
   post "my/lookback/corrections", to: "my/lookback#create_correction", as: :my_lookback_corrections, export: true
 
+  # Struggle tracker review queue for reviewers, the fraud squad and SupaAdmins
+  namespace :review, defaults: { export: true } do
+    resources :struggle_submissions, only: [ :index, :show ], path: "struggle" do
+      member do
+        get :bundle
+        post :decisions, action: :decide
+      end
+    end
+  end
+
   # Namespace for current user actions
   defaults export: true do
     get "my/settings", to: "settings/profile#show", as: :my_settings
@@ -272,6 +282,10 @@ Rails.application.routes.draw do
         get "heartbeats/most_recent", to: "heartbeats#most_recent", export: true
         get "heartbeats", to: "heartbeats#index"
       end
+
+      # strgl-collector: evidence chain anchors and redacted submission bundles
+      post "struggle/anchors", to: "struggle#create_anchor"
+      post "struggle/submissions", to: "struggle#create_submission"
 
       # oauth authenticated namespace
       namespace :authenticated do

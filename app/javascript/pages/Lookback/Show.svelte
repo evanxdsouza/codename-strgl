@@ -4,7 +4,7 @@
   import FormField from "../../components/FormField.svelte";
   import TextInput from "../../components/TextInput.svelte";
   import { myLookback } from "../../api";
-  import { secondsToDisplay } from "../../utils";
+  import { secondsToDisplay, secondsToHours } from "../../utils";
 
   type Session = {
     project: string;
@@ -25,6 +25,20 @@
     heartbeats_count: number;
   };
 
+  type Submission = {
+    id: number;
+    project: string;
+    range_start: string;
+    range_end: string;
+    status: string;
+    estimated_human_seconds: number;
+    proposed_productive_seconds: number;
+    claimable_seconds: number;
+    approved_seconds: number | null;
+    user_explanation: string | null;
+    digest: string;
+  };
+
   let {
     date,
     timezone,
@@ -32,6 +46,7 @@
     projects,
     corrections,
     justification,
+    submissions,
     errors = {},
   }: {
     date: string;
@@ -45,6 +60,7 @@
       projects: string[];
       text: string | null;
     };
+    submissions: Submission[];
     errors?: { correction?: string };
   } = $props();
 
@@ -266,6 +282,61 @@
           >{copied ? "Copied" : "Copy"}</Button
         >
       </div>
+    {/if}
+  </div>
+
+  <div class="rounded-2xl border border-surface-200 bg-dark p-6">
+    <h2 class="text-lg font-semibold text-surface-content">
+      Evidence submissions
+    </h2>
+    <p class="mt-1 text-sm text-muted">
+      Submit from your device with <code>strgl-collector preview</code>: it
+      shows exactly what leaves your machine. Estimated, proposed and approved
+      hours are separate; only approved hours are settled.
+    </p>
+    {#if submissions.length === 0}
+      <p class="mt-4 text-sm text-muted">No submissions yet.</p>
+    {:else}
+      <table
+        class="mt-4 w-full text-left text-sm text-surface-content [&_td]:pr-4 [&_th]:pr-4"
+      >
+        <thead class="text-muted">
+          <tr>
+            <th class="py-2">Range</th>
+            <th>Project</th>
+            <th>Status</th>
+            <th>Estimated</th>
+            <th>Proposed</th>
+            <th>Approved</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each submissions as submission (submission.id)}
+            <tr class="border-t border-surface-200 align-top">
+              <td class="py-2"
+                >{submission.range_start.slice(0, 10)} to {submission.range_end.slice(
+                  0,
+                  10,
+                )}</td
+              >
+              <td>{submission.project}</td>
+              <td
+                >{submission.status.replace("_", " ")}
+                {#if submission.user_explanation}<p class="text-muted">
+                    {submission.user_explanation}
+                  </p>{/if}</td
+              >
+              <td>{secondsToHours(submission.estimated_human_seconds)}</td>
+              <td>{secondsToHours(submission.proposed_productive_seconds)}</td>
+              <td
+                >{submission.approved_seconds === null
+                  ? "-"
+                  : secondsToHours(submission.approved_seconds)}</td
+              >
+            </tr>
+          {/each}
+        </tbody>
+      </table>
     {/if}
   </div>
 </div>

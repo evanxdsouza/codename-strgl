@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_19_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_21_064437) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -702,6 +702,98 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120100) do
     t.index ["key_hash"], name: "index_solid_cache_entries_on_key_hash", unique: true
   end
 
+  create_table "struggle_anchors", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "device_id", null: false
+    t.bigint "seq", null: false
+    t.string "head", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "device_id", "seq"], name: "index_struggle_anchors_on_user_id_and_device_id_and_seq", unique: true
+    t.index ["user_id"], name: "index_struggle_anchors_on_user_id"
+  end
+
+  create_table "struggle_evidence_reads", force: :cascade do |t|
+    t.bigint "struggle_submission_id", null: false
+    t.bigint "user_id", null: false
+    t.string "scope", null: false
+    t.string "access", null: false
+    t.datetime "created_at", null: false
+    t.index ["struggle_submission_id"], name: "index_struggle_evidence_reads_on_struggle_submission_id"
+    t.index ["user_id"], name: "index_struggle_evidence_reads_on_user_id"
+  end
+
+  create_table "struggle_review_decisions", force: :cascade do |t|
+    t.bigint "struggle_submission_id", null: false
+    t.bigint "reviewer_id", null: false
+    t.string "action", null: false
+    t.string "status_before", null: false
+    t.string "status_after", null: false
+    t.integer "approved_seconds"
+    t.text "justification", null: false
+    t.text "user_explanation"
+    t.string "bundle_digest", null: false
+    t.string "rule_set", null: false
+    t.datetime "created_at", null: false
+    t.index ["reviewer_id"], name: "index_struggle_review_decisions_on_reviewer_id"
+    t.index ["struggle_submission_id"], name: "index_struggle_review_decisions_on_struggle_submission_id"
+  end
+
+  create_table "struggle_submissions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "project", null: false
+    t.datetime "range_start", null: false
+    t.datetime "range_end", null: false
+    t.string "digest", null: false
+    t.string "status", default: "submitted", null: false
+    t.string "rule_set", null: false
+    t.string "redaction_version", null: false
+    t.string "collector_version", null: false
+    t.string "device_id", null: false
+    t.integer "estimated_human_seconds", default: 0, null: false
+    t.integer "agent_seconds", default: 0, null: false
+    t.integer "proposed_productive_seconds", default: 0, null: false
+    t.integer "claimable_seconds", default: 0, null: false
+    t.integer "duplicate_seconds", default: 0, null: false
+    t.integer "approved_seconds"
+    t.integer "turns_count", default: 0, null: false
+    t.integer "labelled_one_count", default: 0, null: false
+    t.integer "needs_review_count", default: 0, null: false
+    t.integer "backfilled_count", default: 0, null: false
+    t.string "chain_status", null: false
+    t.integer "chain_anchors_matched", default: 0, null: false
+    t.text "user_context"
+    t.text "reviewer_justification"
+    t.text "user_explanation"
+    t.bigint "supersedes_id"
+    t.datetime "escalated_at"
+    t.datetime "decided_at"
+    t.bigint "decided_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["decided_by_id"], name: "index_struggle_submissions_on_decided_by_id"
+    t.index ["status", "created_at"], name: "index_struggle_submissions_on_status_and_created_at"
+    t.index ["supersedes_id"], name: "index_struggle_submissions_on_supersedes_id"
+    t.index ["user_id", "digest"], name: "index_struggle_submissions_on_user_id_and_digest", unique: true
+    t.index ["user_id"], name: "index_struggle_submissions_on_user_id"
+  end
+
+  create_table "struggle_turn_claims", force: :cascade do |t|
+    t.bigint "struggle_submission_id", null: false
+    t.bigint "user_id", null: false
+    t.string "turn_id", null: false
+    t.bigint "interval_start_ms", null: false
+    t.bigint "interval_end_ms", null: false
+    t.integer "claimed_seconds", default: 0, null: false
+    t.datetime "released_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["struggle_submission_id"], name: "index_struggle_turn_claims_on_struggle_submission_id"
+    t.index ["user_id", "interval_start_ms"], name: "index_struggle_turn_claims_on_user_id_and_interval_start_ms"
+    t.index ["user_id", "turn_id"], name: "index_struggle_turn_claims_live_turn", unique: true, where: "(released_at IS NULL)"
+    t.index ["user_id"], name: "index_struggle_turn_claims_on_user_id"
+  end
+
   create_table "trust_level_audit_logs", force: :cascade do |t|
     t.bigint "changed_by_id"
     t.datetime "created_at", null: false
@@ -764,6 +856,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120100) do
     t.string "username"
     t.boolean "uses_slack_status", default: false, null: false
     t.boolean "weekly_summary_email_enabled", default: true, null: false
+    t.string "struggle_role", default: "none", null: false
     t.index "lower((username)::text)", name: "index_users_on_lower_username_unique", unique: true
     t.index ["display_name_override"], name: "index_users_on_display_name_override_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["github_uid", "github_access_token"], name: "index_users_on_github_uid_and_access_token"
@@ -839,6 +932,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120100) do
   add_foreign_key "project_repo_mappings", "users"
   add_foreign_key "repo_host_events", "users"
   add_foreign_key "sign_in_tokens", "users"
+  add_foreign_key "struggle_anchors", "users"
+  add_foreign_key "struggle_evidence_reads", "struggle_submissions"
+  add_foreign_key "struggle_evidence_reads", "users"
+  add_foreign_key "struggle_review_decisions", "struggle_submissions"
+  add_foreign_key "struggle_review_decisions", "users", column: "reviewer_id"
+  add_foreign_key "struggle_submissions", "struggle_submissions", column: "supersedes_id"
+  add_foreign_key "struggle_submissions", "users"
+  add_foreign_key "struggle_submissions", "users", column: "decided_by_id"
+  add_foreign_key "struggle_turn_claims", "struggle_submissions"
+  add_foreign_key "struggle_turn_claims", "users"
   add_foreign_key "trust_level_audit_logs", "users"
   add_foreign_key "trust_level_audit_logs", "users", column: "changed_by_id"
   add_foreign_key "trust_level_audit_logs", "users", column: "edited_by_id"

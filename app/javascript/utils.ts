@@ -17,6 +17,10 @@ export const secondsToDisplay = (seconds?: number) => {
   return hours > 0 ? (minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`) : `${minutes}m`;
 };
 
+// Hours with two decimals, as in the justification export, for reviewed
+// struggle numbers where sub-minute amounts must not read as zero.
+export const secondsToHours = (seconds: number) => `${(seconds / 3600).toFixed(2)}h`;
+
 export const secondsToCompactDisplay = (seconds?: number) => {
   if (!seconds) return "0m";
   const hours = Math.floor(seconds / 3600);

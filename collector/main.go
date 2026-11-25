@@ -74,6 +74,13 @@ func main() {
 	cfgPath := flag.String("config", filepath.Join(home, ".wakatime.cfg"), "WakaTime config file with api_url and api_key")
 	statePath := flag.String("state", filepath.Join(home, ".strgl", "state.json"), "where read positions are kept")
 	showVersion := flag.Bool("version", false, "print the version and exit")
+	evidence := flag.Bool("evidence", true, "record the local turn timeline and encrypted evidence (never uploaded unless you submit)")
+	storePath := flag.String("store", filepath.Join(home, ".strgl", "evidence.db"), "local evidence database")
+	retention := flag.Duration("retention", 30*24*time.Hour, "keep local evidence content this long")
+	localOnly := flag.Bool("local-only", false, "record the local timeline only: send no heartbeats and no anchors")
+	if len(os.Args) > 1 && runEvidenceCommand(os.Args[1:], home, filepath.Join(home, ".wakatime.cfg")) {
+		return
+	}
 	flag.Parse()
 	if *showVersion {
 		fmt.Println(version)
@@ -81,14 +88,29 @@ func main() {
 	}
 
 	apiURL, apiKey := readConfig(*cfgPath)
-	if !*dryRun && (apiURL == "" || apiKey == "") {
+	if !*dryRun && !*localOnly && (apiURL == "" || apiKey == "") {
 		log.Fatalf("set api_url and api_key in %s or STRGL_API_URL and STRGL_API_KEY", *cfgPath)
 	}
 	sources := defaultSources(home)
+	var store *Store
+	if *localOnly && !*evidence {
+		log.Fatal("-local-only needs -evidence")
+	}
+	if *evidence && !*dryRun {
+		var err error
+		if store, err = OpenStore(*storePath, *retention); err != nil {
+			log.Fatalf("evidence store: %v (run with -evidence=false to send heartbeats only)", err)
+		}
+		defer store.Close()
+	}
+	captureSources := defaultCaptureSources(home)
 
 	for {
 		state := loadState(*statePath)
-		beats := scan(sources, state, time.Now().Add(-*backfill))
+		var beats []Heartbeat
+		if !*localOnly {
+			beats = scan(sources, state, time.Now().Add(-*backfill))
+		}
 		switch {
 		case *dryRun:
 			out, _ := json.MarshalIndent(beats, "", "  ")
@@ -104,8 +126,23 @@ func main() {
 				log.Printf("sent %d heartbeats", len(beats))
 			}
 		}
-		if len(beats) == 0 {
+		if len(beats) == 0 && !*localOnly {
 			_ = saveState(*statePath, state) // records newly seen files
+		}
+		if store != nil {
+			now := time.Now()
+			if _, err := store.CaptureScan(captureSources, now.Add(-*backfill), now); err != nil {
+				log.Printf("capture: %v", err)
+			}
+			if _, err := store.Purge(now); err != nil {
+				log.Printf("purge: %v", err)
+			}
+			store.cleanEvidenceSpool(captureSources[len(captureSources)-1].root, now)
+			if *localOnly {
+				// no anchors
+			} else if err := store.anchor(apiURL, apiKey, now); err != nil {
+				log.Printf("anchor failed, will retry: %v", err)
+			}
 		}
 		if *once {
 			return
@@ -148,6 +185,9 @@ func scan(sources []source, state *State, since time.Time) []Heartbeat {
 	var beats []Heartbeat
 	for _, src := range sources {
 		_ = filepath.WalkDir(src.root, func(path string, d fs.DirEntry, err error) error {
+			if err == nil && d.IsDir() && src.harness == "opencode" && d.Name() == "evidence" {
+				return filepath.SkipDir // the local evidence spool, read by CaptureScan
+			}
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".jsonl") {
 				return nil
 			}

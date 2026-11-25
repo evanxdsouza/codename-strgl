@@ -16,7 +16,8 @@ class My::LookbackController < InertiaController
       sessions: day.sessions.map { |session| session_props(session) },
       projects: current_user.heartbeats.distinct_values(:project).compact_blank,
       corrections: current_user.project_corrections.order(created_at: :desc).limit(20).map { |correction| correction_props(correction) },
-      justification: justification_props(date)
+      justification: justification_props(date),
+      submissions: current_user.struggle_submissions.order(created_at: :desc).limit(20).map { |submission| submission_props(submission) }
     }
   end
 
@@ -59,6 +60,24 @@ class My::LookbackController < InertiaController
       agent_seconds: session.agent_seconds.round,
       harness: session.harness,
       prompts: session.prompts
+    }
+  end
+
+  # What the submitter sees: numbers, status and the explanation written for
+  # them. Reviewers' internal justifications are not shown.
+  def submission_props(submission)
+    {
+      id: submission.id,
+      project: submission.project,
+      range_start: local_time(submission.range_start.to_f),
+      range_end: local_time(submission.range_end.to_f),
+      status: submission.status,
+      estimated_human_seconds: submission.estimated_human_seconds,
+      proposed_productive_seconds: submission.proposed_productive_seconds,
+      claimable_seconds: submission.claimable_seconds,
+      approved_seconds: submission.decided? ? submission.approved_seconds : nil,
+      user_explanation: submission.user_explanation,
+      digest: submission.digest
     }
   end
 
