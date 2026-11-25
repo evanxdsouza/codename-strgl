@@ -1,0 +1,767 @@
+{
+  "schema": 1,
+  "collector_version": "0.1.0",
+  "device_id": "dev_f125510d7f33d80e46175107",
+  "key_protection": "file-0600",
+  "rule_set": "struggle-v1.0",
+  "redaction_version": "redact-v1.0",
+  "project": "probe-project",
+  "from": 1794614400000,
+  "to": 1795305600000,
+  "created_at": 1795243340665,
+  "user_context": "I am learning Python testing",
+  "totals": {
+    "estimated_human_seconds": 77,
+    "agent_seconds": 0,
+    "proposed_productive_seconds": 68,
+    "turns": 3,
+    "labelled_one": 2,
+    "needs_review": 0,
+    "backfilled": 0,
+    "withheld_items": 0,
+    "excluded_items": 0
+  },
+  "turns": [
+    {
+      "id": "turn_72f453c311ebbeebcb56",
+      "harness": "opencode",
+      "session": "314e16b220d4ff9f",
+      "branch": "master",
+      "model": "big-pickle",
+      "started_at": 1795243208983,
+      "ended_at": 1795243221174,
+      "end_reason": "completed",
+      "recorded_at": 1795243209316,
+      "backfilled": false,
+      "prompt_length": 270,
+      "agent_events": 13,
+      "tool_calls": 3,
+      "child_sessions": 0,
+      "input_tokens": 732,
+      "output_tokens": 162,
+      "files_changed": [
+        "calc.py"
+      ],
+      "diff_observed": true,
+      "label": {
+        "turn_id": "turn_72f453c311ebbeebcb56",
+        "value": 1,
+        "reason": "The prompt shows diagnosis and new constraints grounded in specifics or observed test runs.",
+        "signals": [
+          "diagnosis",
+          "constraint",
+          "specific_reference",
+          "test_run_observed",
+          "passing_test_observed",
+          "agent_changed_files"
+        ],
+        "evidence": [
+          "33d71ae55bea5f2a4641e713:0",
+          "19ab53e20877fbaac4747115:0"
+        ],
+        "coverage": "full",
+        "needs_review": false,
+        "rule_set": "struggle-v1.0",
+        "interval_start": 1795243208983,
+        "interval_end": 1795243247011,
+        "productive_seconds": 38
+      },
+      "items": [
+        {
+          "id": "33d71ae55bea5f2a4641e713:0",
+          "kind": "prompt",
+          "occurred_at": 1795243208983,
+          "recorded_at": 1795243209316,
+          "commitment": "48ab8e400e781c67b5d1392dd76a59f41e4141e1cc3896c12c5af0bba042b2bc",
+          "chain_seq": 1,
+          "status": "included",
+          "text": "test_add fails with AssertionError -1 != 5. I think add() in calc.py subtracts instead of adding. Fix only calc.py, do not touch the test, then run python3 -m unittest. (My deploy key is [API_KEY:85e9646c] and email [EMAIL:1993f307], never print them.)",
+          "redactions": [
+            {
+              "type": "API_KEY",
+              "placeholder": "[API_KEY:85e9646c]"
+            },
+            {
+              "type": "EMAIL",
+              "placeholder": "[EMAIL:1993f307]"
+            }
+          ]
+        },
+        {
+          "id": "f91aa009934ea488725eb027:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243212310,
+          "recorded_at": 1795243214333,
+          "commitment": "7368494a8082503e7b7d97e7a4c2372f520602e5bc040d7be26e84431e301550",
+          "chain_seq": 2,
+          "status": "included",
+          "tool": "read",
+          "text": "{\"path\":\"\u003cprobe-project\u003e/calc.py\"}"
+        },
+        {
+          "id": "3b238dbb97e041e39f68990e:0",
+          "kind": "response",
+          "occurred_at": 1795243212314,
+          "recorded_at": 1795243214333,
+          "commitment": "6d69dbf71bb3f164fb73a0790d319ca5618f8616ec0401ef787d4554c146a13a",
+          "chain_seq": 3,
+          "status": "included",
+          "text": "I'll look at the code and fix only `calc.py`. I'll keep your private credentials out of my output."
+        },
+        {
+          "id": "5d96d3c93d3781d42553a485:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243212326,
+          "recorded_at": 1795243214333,
+          "commitment": "e85edce9d9078336131eb124032727594d3cd1871d523f3317f52b6bedf63c5b",
+          "chain_seq": 4,
+          "status": "included",
+          "tool": "read",
+          "text": "Read file \u003cprobe-project\u003e/calc.py, lines 1-2\n1: def add(a, b):\n2:     return a - b"
+        },
+        {
+          "id": "a11c6d656867603cc3ddc7f6:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243215078,
+          "recorded_at": 1795243219348,
+          "commitment": "0e825d45541417e11833c9165e6404fc04b9e84d2ac7e802eb1c8159f09b75a5",
+          "chain_seq": 5,
+          "status": "included",
+          "tool": "edit",
+          "text": "{\"path\":\"\u003cprobe-project\u003e/calc.py\",\"oldString\":\"    return a - b\",\"newString\":\"    return a + b\"}"
+        },
+        {
+          "id": "7fc922af0f7ab0e7725af7da:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243215088,
+          "recorded_at": 1795243219348,
+          "commitment": "a91bd1c5efe0308c540467a8d8a303b969098ce79b695c95980c7b52dff93a6d",
+          "chain_seq": 6,
+          "status": "included",
+          "tool": "edit",
+          "text": "Edited calc.py (1 replacement)"
+        },
+        {
+          "id": "99c7d7f0778cc7ff495b7b5e:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243219097,
+          "recorded_at": 1795243219348,
+          "commitment": "aba3066e5eaa4d18a8c61ea5b3c52e44703635f3447b88a7c990305b03be6845",
+          "chain_seq": 7,
+          "status": "included",
+          "tool": "shell",
+          "command": "python3 -m unittest",
+          "text": "{\"command\":\"python3 -m unittest\",\"workdir\":\"\u003cprobe-project\u003e\"}"
+        },
+        {
+          "id": "19ab53e20877fbaac4747115:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243219306,
+          "recorded_at": 1795243219348,
+          "commitment": "2e8e872908c6ed7bcb7c1d180c818bbe7f9bebd9bbf4f57196ea9ab2b49086cc",
+          "chain_seq": 8,
+          "status": "included",
+          "tool": "shell",
+          "exit": 0,
+          "text": ".\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n"
+        },
+        {
+          "id": "27156037c36502da7982d9be",
+          "kind": "diff",
+          "occurred_at": 1795243219348,
+          "recorded_at": 1795243219348,
+          "commitment": "be7001bce7e958bf659c289dc85efeadbce35778d53efb14cf871a014f70a511",
+          "chain_seq": 9,
+          "status": "included",
+          "text": "Files changed since the previous scan: calc.py\n--- calc.py\n+    return a + b\n-    return a - b\n"
+        },
+        {
+          "id": "efd5d4c9b721dc84a7f5ca80:0",
+          "kind": "response",
+          "occurred_at": 1795243221153,
+          "recorded_at": 1795243224364,
+          "commitment": "dd1322ef3bc3c85e3d8eb0d571c1657a922f720451d7ab104d61b0f7fb75e761",
+          "chain_seq": 10,
+          "status": "included",
+          "text": "Fixed `add()` in `calc.py` to return `a + b`. Ran `python3 -m unittest` — all tests pass (1 test, OK)."
+        }
+      ]
+    },
+    {
+      "id": "turn_a84fe9f575cf26080ff1",
+      "harness": "opencode",
+      "session": "314e16b220d4ff9f",
+      "branch": "master",
+      "model": "big-pickle",
+      "started_at": 1795243247011,
+      "ended_at": 1795243264205,
+      "end_reason": "completed",
+      "recorded_at": 1795243249427,
+      "backfilled": false,
+      "prompt_length": 156,
+      "agent_events": 18,
+      "tool_calls": 5,
+      "child_sessions": 0,
+      "input_tokens": 1409,
+      "output_tokens": 305,
+      "files_changed": [
+        "test_calc.py"
+      ],
+      "diff_observed": true,
+      "label": {
+        "turn_id": "turn_a84fe9f575cf26080ff1",
+        "value": 1,
+        "reason": "You changed files yourself before this prompt, then directed the agent.",
+        "signals": [
+          "constraint",
+          "specific_reference",
+          "human_edit_between_turns",
+          "test_run_observed",
+          "passing_test_observed",
+          "agent_changed_files"
+        ],
+        "evidence": [
+          "49fc3572ecab16d7aaf71053:0",
+          "9ced9ba1fb3ba8b606f72a01",
+          "17d0fcad22e637be49cab47b:0"
+        ],
+        "coverage": "full",
+        "needs_review": false,
+        "rule_set": "struggle-v1.0",
+        "interval_start": 1795243247011,
+        "interval_end": 1795243277959,
+        "productive_seconds": 30
+      },
+      "items": [
+        {
+          "id": "9ced9ba1fb3ba8b606f72a01",
+          "kind": "between_turns_change",
+          "occurred_at": 1795243234388,
+          "recorded_at": 1795243234388,
+          "commitment": "8e8761e9764c756ebb545605f5587980486ff8f0f6e1b7cb3a039542d46fcf1d",
+          "chain_seq": 11,
+          "status": "included",
+          "text": "Files changed since the previous scan: calc.py\n--- calc.py\n+\n+def neg(a):\n+    return -a\n+\n"
+        },
+        {
+          "id": "49fc3572ecab16d7aaf71053:0",
+          "kind": "prompt",
+          "occurred_at": 1795243247011,
+          "recorded_at": 1795243249427,
+          "commitment": "92623bc878f77353debe32c8eb6155705977217c8df494a37d28ee7bbceb58ee",
+          "chain_seq": 12,
+          "status": "included",
+          "text": "I added neg() to calc.py myself. Add a unit test for it in test_calc.py that checks neg(3) == -3 and neg(0) == 0, keep the existing test, and run the tests."
+        },
+        {
+          "id": "7d6b2f9c76322f5689782837:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243250056,
+          "recorded_at": 1795243254443,
+          "commitment": "f765ea672fb82efb00bf6abc49296047b184b6a9a56b1fbb7291a7a0441ce888",
+          "chain_seq": 13,
+          "status": "included",
+          "tool": "read",
+          "text": "{\"path\":\"\u003cprobe-project\u003e/calc.py\"}"
+        },
+        {
+          "id": "eb39e4ec7becada6c86c6472:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243250062,
+          "recorded_at": 1795243254443,
+          "commitment": "d95694f2211d63bf43014c0532c526d375ac5880493ceda8efba247278ac4210",
+          "chain_seq": 14,
+          "status": "included",
+          "tool": "read",
+          "text": "{\"path\":\"\u003cprobe-project\u003e/test_calc.py\"}"
+        },
+        {
+          "id": "cd7c8c3987a50c5c8d3ce75a:0",
+          "kind": "response",
+          "occurred_at": 1795243250065,
+          "recorded_at": 1795243254443,
+          "commitment": "a37d032efaae0948ce575dfc0e5e7c43be18d624ebe69bd33597d422ee393cd0",
+          "chain_seq": 15,
+          "status": "included",
+          "text": "I'll check both files, add the test alongside the existing one, then run the suite."
+        },
+        {
+          "id": "01c5f4a4c020f3c9dd61aa46:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243250081,
+          "recorded_at": 1795243254443,
+          "commitment": "8e4c4fece39fe4582febd7a78aaf7ad98491e63f53e315a4d6dffe8dfa14b8e1",
+          "chain_seq": 16,
+          "status": "included",
+          "tool": "read",
+          "text": "Read file \u003cprobe-project\u003e/calc.py, lines 1-6\n1: def add(a, b):\n2:     return a + b\n3: \n4: \n5: def neg(a):\n6:     return -a"
+        },
+        {
+          "id": "c85377897821b36eff503a69:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243250085,
+          "recorded_at": 1795243254443,
+          "commitment": "36b40c0467a22098832d71e4d3d55c5f59f28717e41b051b617db02263ac3355",
+          "chain_seq": 17,
+          "status": "included",
+          "tool": "read",
+          "text": "Read file \u003cprobe-project\u003e/test_calc.py, lines 1-7\n1: import unittest\n2: from calc import add\n3: class T(unittest.TestCase):\n4:     def test_add(self):\n5:         self.assertEqual(add(2, 3), 5)\n6: if __name__ == \"__main__\":\n7:     unittest.main()"
+        },
+        {
+          "id": "7c6ed22e93f9ea792d673b9a:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243254413,
+          "recorded_at": 1795243254443,
+          "commitment": "78e479eeaa6df9f372e67e7cc505f78d377cfc40ce790bc7d991bb37541e5404",
+          "chain_seq": 18,
+          "status": "included",
+          "tool": "edit",
+          "text": "{\"path\":\"\u003cprobe-project\u003e/test_calc.py\",\"oldString\":\"from calc import add\",\"newString\":\"from calc import add, neg\"}"
+        },
+        {
+          "id": "dfec34eee07654234d15f21d:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243254423,
+          "recorded_at": 1795243254443,
+          "commitment": "7e85ac0435c38b1dd442865fc4eb6d30bf40820c4f39e293b2a4dc41e0d8e3a1",
+          "chain_seq": 19,
+          "status": "included",
+          "tool": "edit",
+          "text": "Edited test_calc.py (1 replacement)"
+        },
+        {
+          "id": "de023d4311a69f2ae63258c6",
+          "kind": "diff",
+          "occurred_at": 1795243254443,
+          "recorded_at": 1795243254443,
+          "commitment": "52306dd66e1e4a4cdf5183b7d8b2de277c7519bd33daef29062413eeee8dc480",
+          "chain_seq": 20,
+          "status": "included",
+          "text": "Files changed since the previous scan: test_calc.py\n--- test_calc.py\n+from calc import add, neg\n-from calc import add\n"
+        },
+        {
+          "id": "bcfd8fee67eb8592b73170ee:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243258173,
+          "recorded_at": 1795243259466,
+          "commitment": "2a16dd8e191e24ddc1517046a8809abe7c5cdc0b80c05d642084a55d0445cafd",
+          "chain_seq": 21,
+          "status": "included",
+          "tool": "edit",
+          "text": "{\"path\":\"\u003cprobe-project\u003e/test_calc.py\",\"oldString\":\"    def test_add(self):\\n        self.assertEqual(add(2, 3), 5)\\n\",\"newString\":\"    def test_add(self):\\n        self.assertEqual(add(2, 3), 5)\\n\\n    def test_neg(self):\\n        self.assertEqual(neg(3), -3)\\n        self.assertEqual(neg(0), 0)\\n\"}"
+        },
+        {
+          "id": "a0822bbf561c13f3e5272735:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243258182,
+          "recorded_at": 1795243259466,
+          "commitment": "1c462892fac31014002c70d61d92f3ca590274bcd5e8c87a517921e2ed5bb036",
+          "chain_seq": 22,
+          "status": "included",
+          "tool": "edit",
+          "text": "Edited test_calc.py (1 replacement)"
+        },
+        {
+          "id": "a2296adb3265b0f2573b7050",
+          "kind": "diff",
+          "occurred_at": 1795243259466,
+          "recorded_at": 1795243259466,
+          "commitment": "9d020efe80a690ce50260cadeb71f3b02e5e801dc9d7f860e99d15d7c55ac049",
+          "chain_seq": 23,
+          "status": "included",
+          "text": "Files changed since the previous scan: test_calc.py\n--- test_calc.py\n+\n+    def test_neg(self):\n+        self.assertEqual(neg(3), -3)\n+        self.assertEqual(neg(0), 0)\n"
+        },
+        {
+          "id": "c8bbd50c750f4d2f748b44c5:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243261574,
+          "recorded_at": 1795243264484,
+          "commitment": "59c2091de0b7554de95a2f895cbccb4deb22de460e084277777b396215bcca79",
+          "chain_seq": 24,
+          "status": "included",
+          "tool": "shell",
+          "command": "python3 -m unittest",
+          "text": "{\"command\":\"python3 -m unittest\",\"workdir\":\"\u003cprobe-project\u003e\"}"
+        },
+        {
+          "id": "17d0fcad22e637be49cab47b:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243261726,
+          "recorded_at": 1795243264484,
+          "commitment": "9a81a25119bcf06ae109d7578e4935145f10d2b2efcd41a29f829de053ba3c62",
+          "chain_seq": 25,
+          "status": "included",
+          "tool": "shell",
+          "exit": 0,
+          "text": "..\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n"
+        },
+        {
+          "id": "21c3ed2a3ef0480218f16f25:0",
+          "kind": "response",
+          "occurred_at": 1795243264184,
+          "recorded_at": 1795243264484,
+          "commitment": "aa636ea8feb2d18ef8e90c484d342bcdaba6450a0e044f1d8ea4821016f6b5ff",
+          "chain_seq": 26,
+          "status": "included",
+          "text": "Added `test_neg` to `test_calc.py` (checking `neg(3) == -3` and `neg(0) == 0`) while keeping `test_add`. Ran `python3 -m unittest` — 2 tests pass."
+        }
+      ]
+    },
+    {
+      "id": "turn_2f61bc4412338b2cd4c4",
+      "harness": "opencode",
+      "session": "314e16b220d4ff9f",
+      "branch": "master",
+      "model": "big-pickle",
+      "started_at": 1795243277959,
+      "ended_at": 1795243286707,
+      "end_reason": "completed",
+      "recorded_at": 1795243279520,
+      "backfilled": false,
+      "prompt_length": 9,
+      "agent_events": 14,
+      "tool_calls": 4,
+      "child_sessions": 0,
+      "input_tokens": 1083,
+      "output_tokens": 146,
+      "files_changed": [],
+      "diff_observed": true,
+      "label": {
+        "turn_id": "turn_2f61bc4412338b2cd4c4",
+        "value": 0,
+        "reason": "Short re-prompt with no new information or own edits (for example \"try again\").",
+        "signals": [
+          "test_run_observed",
+          "passing_test_observed"
+        ],
+        "evidence": [
+          "a7fbc344ddfdf30a55961679:0",
+          "73244fef214b0f7ce729a221:0"
+        ],
+        "coverage": "full",
+        "needs_review": false,
+        "rule_set": "struggle-v1.0",
+        "interval_start": 1795243277959,
+        "interval_end": 1795243286707,
+        "productive_seconds": 0,
+        "coaching": "Say what you observed and what you think is wrong before asking again."
+      },
+      "items": [
+        {
+          "id": "a7fbc344ddfdf30a55961679:0",
+          "kind": "prompt",
+          "occurred_at": 1795243277959,
+          "recorded_at": 1795243279520,
+          "commitment": "c039f4b972247fd0dcb6ee48aa12580b236d36547ef543627e1d8d56722fad1c",
+          "chain_seq": 27,
+          "status": "included",
+          "text": "try again"
+        },
+        {
+          "id": "45a9d0cb7b58f7f50d7b9ea0:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243282059,
+          "recorded_at": 1795243284536,
+          "commitment": "3af9707c8ec201211bb66e97da83e21373b893efd09399112c5d294b56acd297",
+          "chain_seq": 28,
+          "status": "included",
+          "tool": "read",
+          "text": "{\"path\":\"\u003cprobe-project\u003e/test_calc.py\"}"
+        },
+        {
+          "id": "6d1c4fc25deea8cf1164934c:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243282065,
+          "recorded_at": 1795243284536,
+          "commitment": "de7fe07ee69a08678917589897437366d7d0e3a95079ddfc94cb50dd60de58a5",
+          "chain_seq": 29,
+          "status": "included",
+          "tool": "read",
+          "text": "{\"path\":\"\u003cprobe-project\u003e/calc.py\"}"
+        },
+        {
+          "id": "eb248a19eb57ea4d6e971740:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243282074,
+          "recorded_at": 1795243284536,
+          "commitment": "59855fc0c34c95306e8ed5ea06ee76ada6e516f00adc5a38f3f11a827922ac9e",
+          "chain_seq": 30,
+          "status": "included",
+          "tool": "glob",
+          "text": "{\"pattern\":\"**/test*.py\",\"path\":\"\u003cprobe-project\u003e\"}"
+        },
+        {
+          "id": "515c470699bdadad179098d2:0",
+          "kind": "response",
+          "occurred_at": 1795243282079,
+          "recorded_at": 1795243284536,
+          "commitment": "500b5be2b97f470a513643d2d81ac359d22c7695b8b12c2da1f435258f725741",
+          "chain_seq": 31,
+          "status": "included",
+          "text": "I'll re-check the files and re-run the test command."
+        },
+        {
+          "id": "36aa6aec5b721f033dbca5f7:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243282094,
+          "recorded_at": 1795243284536,
+          "commitment": "9803f4b4ae756017b708e53c334c2d6eac51e1c6a4d36b7955f87d6b4ba42823",
+          "chain_seq": 32,
+          "status": "included",
+          "tool": "read",
+          "text": "Read file \u003cprobe-project\u003e/test_calc.py, lines 1-11\n1: import unittest\n2: from calc import add, neg\n3: class T(unittest.TestCase):\n4:     def test_add(self):\n5:         self.assertEqual(add(2, 3), 5)\n6: \n7:     def test_neg(self):\n8:         self.assertEqual(neg(3), -3)\n9:         self.assertEqual(neg(0), 0)\n10: if __name__ == \"__main__\":\n11:     unittest.main()"
+        },
+        {
+          "id": "0fb74ace71e4d29db3b8ba79:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243282098,
+          "recorded_at": 1795243284536,
+          "commitment": "54d79caded462d0da2befa0288dbba676048f95db793c05aafc79f172c9950f5",
+          "chain_seq": 33,
+          "status": "included",
+          "tool": "read",
+          "text": "Read file \u003cprobe-project\u003e/calc.py, lines 1-6\n1: def add(a, b):\n2:     return a + b\n3: \n4: \n5: def neg(a):\n6:     return -a"
+        },
+        {
+          "id": "8d964260af468c86f6ca5709:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243282104,
+          "recorded_at": 1795243284536,
+          "commitment": "44ce678185eb2dfd990ae0974fcd18ee562a96acee92083953b5baabd1bbbf54",
+          "chain_seq": 34,
+          "status": "included",
+          "tool": "glob",
+          "text": "\u003cprobe-project\u003e/test_calc.py"
+        },
+        {
+          "id": "d5b25f8da91a5539521af8a9:0",
+          "kind": "tool_call",
+          "occurred_at": 1795243284334,
+          "recorded_at": 1795243284536,
+          "commitment": "c3f26438a28a19f447352aa5af9981f2cf3bae65bc5bf0311ef14241c13614c9",
+          "chain_seq": 35,
+          "status": "included",
+          "tool": "shell",
+          "command": "python3 -m unittest",
+          "text": "{\"command\":\"python3 -m unittest\",\"workdir\":\"\u003cprobe-project\u003e\"}"
+        },
+        {
+          "id": "73244fef214b0f7ce729a221:0",
+          "kind": "tool_output",
+          "occurred_at": 1795243284492,
+          "recorded_at": 1795243284536,
+          "commitment": "2a5636a770772bd576519c114e3da36da3aaf4eb0e37abc3771555d0f5cb3500",
+          "chain_seq": 36,
+          "status": "included",
+          "tool": "shell",
+          "exit": 0,
+          "text": "..\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n"
+        },
+        {
+          "id": "e328bbbba8db4f75684133be:0",
+          "kind": "response",
+          "occurred_at": 1795243286685,
+          "recorded_at": 1795243289555,
+          "commitment": "9b53845af84a979a6ff46611deb393574478f78d3fd0ae502640003c732f1a7a",
+          "chain_seq": 37,
+          "status": "included",
+          "text": "Re-ran it: files are unchanged as intended, and `python3 -m unittest` reports 2 tests passed (OK)."
+        }
+      ]
+    }
+  ],
+  "chain": {
+    "previous_head": "",
+    "entries": [
+      {
+        "seq": 1,
+        "commitment": "48ab8e400e781c67b5d1392dd76a59f41e4141e1cc3896c12c5af0bba042b2bc",
+        "recorded_at": 1795243209316
+      },
+      {
+        "seq": 2,
+        "commitment": "7368494a8082503e7b7d97e7a4c2372f520602e5bc040d7be26e84431e301550",
+        "recorded_at": 1795243214333
+      },
+      {
+        "seq": 3,
+        "commitment": "6d69dbf71bb3f164fb73a0790d319ca5618f8616ec0401ef787d4554c146a13a",
+        "recorded_at": 1795243214333
+      },
+      {
+        "seq": 4,
+        "commitment": "e85edce9d9078336131eb124032727594d3cd1871d523f3317f52b6bedf63c5b",
+        "recorded_at": 1795243214333
+      },
+      {
+        "seq": 5,
+        "commitment": "0e825d45541417e11833c9165e6404fc04b9e84d2ac7e802eb1c8159f09b75a5",
+        "recorded_at": 1795243219348
+      },
+      {
+        "seq": 6,
+        "commitment": "a91bd1c5efe0308c540467a8d8a303b969098ce79b695c95980c7b52dff93a6d",
+        "recorded_at": 1795243219348
+      },
+      {
+        "seq": 7,
+        "commitment": "aba3066e5eaa4d18a8c61ea5b3c52e44703635f3447b88a7c990305b03be6845",
+        "recorded_at": 1795243219348
+      },
+      {
+        "seq": 8,
+        "commitment": "2e8e872908c6ed7bcb7c1d180c818bbe7f9bebd9bbf4f57196ea9ab2b49086cc",
+        "recorded_at": 1795243219348
+      },
+      {
+        "seq": 9,
+        "commitment": "be7001bce7e958bf659c289dc85efeadbce35778d53efb14cf871a014f70a511",
+        "recorded_at": 1795243219348
+      },
+      {
+        "seq": 10,
+        "commitment": "dd1322ef3bc3c85e3d8eb0d571c1657a922f720451d7ab104d61b0f7fb75e761",
+        "recorded_at": 1795243224364
+      },
+      {
+        "seq": 11,
+        "commitment": "8e8761e9764c756ebb545605f5587980486ff8f0f6e1b7cb3a039542d46fcf1d",
+        "recorded_at": 1795243234388
+      },
+      {
+        "seq": 12,
+        "commitment": "92623bc878f77353debe32c8eb6155705977217c8df494a37d28ee7bbceb58ee",
+        "recorded_at": 1795243249427
+      },
+      {
+        "seq": 13,
+        "commitment": "f765ea672fb82efb00bf6abc49296047b184b6a9a56b1fbb7291a7a0441ce888",
+        "recorded_at": 1795243254443
+      },
+      {
+        "seq": 14,
+        "commitment": "d95694f2211d63bf43014c0532c526d375ac5880493ceda8efba247278ac4210",
+        "recorded_at": 1795243254443
+      },
+      {
+        "seq": 15,
+        "commitment": "a37d032efaae0948ce575dfc0e5e7c43be18d624ebe69bd33597d422ee393cd0",
+        "recorded_at": 1795243254443
+      },
+      {
+        "seq": 16,
+        "commitment": "8e4c4fece39fe4582febd7a78aaf7ad98491e63f53e315a4d6dffe8dfa14b8e1",
+        "recorded_at": 1795243254443
+      },
+      {
+        "seq": 17,
+        "commitment": "36b40c0467a22098832d71e4d3d55c5f59f28717e41b051b617db02263ac3355",
+        "recorded_at": 1795243254443
+      },
+      {
+        "seq": 18,
+        "commitment": "78e479eeaa6df9f372e67e7cc505f78d377cfc40ce790bc7d991bb37541e5404",
+        "recorded_at": 1795243254443
+      },
+      {
+        "seq": 19,
+        "commitment": "7e85ac0435c38b1dd442865fc4eb6d30bf40820c4f39e293b2a4dc41e0d8e3a1",
+        "recorded_at": 1795243254443
+      },
+      {
+        "seq": 20,
+        "commitment": "52306dd66e1e4a4cdf5183b7d8b2de277c7519bd33daef29062413eeee8dc480",
+        "recorded_at": 1795243254443
+      },
+      {
+        "seq": 21,
+        "commitment": "2a16dd8e191e24ddc1517046a8809abe7c5cdc0b80c05d642084a55d0445cafd",
+        "recorded_at": 1795243259466
+      },
+      {
+        "seq": 22,
+        "commitment": "1c462892fac31014002c70d61d92f3ca590274bcd5e8c87a517921e2ed5bb036",
+        "recorded_at": 1795243259466
+      },
+      {
+        "seq": 23,
+        "commitment": "9d020efe80a690ce50260cadeb71f3b02e5e801dc9d7f860e99d15d7c55ac049",
+        "recorded_at": 1795243259466
+      },
+      {
+        "seq": 24,
+        "commitment": "59c2091de0b7554de95a2f895cbccb4deb22de460e084277777b396215bcca79",
+        "recorded_at": 1795243264484
+      },
+      {
+        "seq": 25,
+        "commitment": "9a81a25119bcf06ae109d7578e4935145f10d2b2efcd41a29f829de053ba3c62",
+        "recorded_at": 1795243264484
+      },
+      {
+        "seq": 26,
+        "commitment": "aa636ea8feb2d18ef8e90c484d342bcdaba6450a0e044f1d8ea4821016f6b5ff",
+        "recorded_at": 1795243264484
+      },
+      {
+        "seq": 27,
+        "commitment": "c039f4b972247fd0dcb6ee48aa12580b236d36547ef543627e1d8d56722fad1c",
+        "recorded_at": 1795243279520
+      },
+      {
+        "seq": 28,
+        "commitment": "3af9707c8ec201211bb66e97da83e21373b893efd09399112c5d294b56acd297",
+        "recorded_at": 1795243284536
+      },
+      {
+        "seq": 29,
+        "commitment": "de7fe07ee69a08678917589897437366d7d0e3a95079ddfc94cb50dd60de58a5",
+        "recorded_at": 1795243284536
+      },
+      {
+        "seq": 30,
+        "commitment": "59855fc0c34c95306e8ed5ea06ee76ada6e516f00adc5a38f3f11a827922ac9e",
+        "recorded_at": 1795243284536
+      },
+      {
+        "seq": 31,
+        "commitment": "500b5be2b97f470a513643d2d81ac359d22c7695b8b12c2da1f435258f725741",
+        "recorded_at": 1795243284536
+      },
+      {
+        "seq": 32,
+        "commitment": "9803f4b4ae756017b708e53c334c2d6eac51e1c6a4d36b7955f87d6b4ba42823",
+        "recorded_at": 1795243284536
+      },
+      {
+        "seq": 33,
+        "commitment": "54d79caded462d0da2befa0288dbba676048f95db793c05aafc79f172c9950f5",
+        "recorded_at": 1795243284536
+      },
+      {
+        "seq": 34,
+        "commitment": "44ce678185eb2dfd990ae0974fcd18ee562a96acee92083953b5baabd1bbbf54",
+        "recorded_at": 1795243284536
+      },
+      {
+        "seq": 35,
+        "commitment": "c3f26438a28a19f447352aa5af9981f2cf3bae65bc5bf0311ef14241c13614c9",
+        "recorded_at": 1795243284536
+      },
+      {
+        "seq": 36,
+        "commitment": "2a5636a770772bd576519c114e3da36da3aaf4eb0e37abc3771555d0f5cb3500",
+        "recorded_at": 1795243284536
+      },
+      {
+        "seq": 37,
+        "commitment": "9b53845af84a979a6ff46611deb393574478f78d3fd0ae502640003c732f1a7a",
+        "recorded_at": 1795243289555
+      }
+    ]
+  },
+  "notes": [
+    "Automated redaction (redact-v1.0) replaces common secret formats and contact details with typed placeholders. It is not guaranteed anonymisation.",
+    "Commitments are salted hashes of the raw items, recorded on the device when the items were captured. They protect against later alteration, not against a modified client."
+  ]
+}
