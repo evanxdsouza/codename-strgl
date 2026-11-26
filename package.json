@@ -22,7 +22,7 @@
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.5",
     "@tsconfig/svelte": "^5.0.9",
-    "beasties": "^0.5.4",
+    "beasties": "^0.5.5",
     "bits-ui": "^2.22.0",
     "blume": "^2.2.7",
     "canvas-confetti": "^1.9.4",
@@ -50,8 +50,5 @@
     "oxlint": "^1.94.0",
     "playwright": "1.65.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
-  },
-  "patchedDependencies": {
-    "beasties@0.5.4": "patches/beasties@0.5.4.patch"
   }
 }
