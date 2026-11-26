@@ -3,7 +3,7 @@ class StruggleEvidenceRead < ApplicationRecord
   belongs_to :struggle_submission
   belongs_to :user
 
-  validates :scope, inclusion: { in: %w[review escalated] }
+  validates :scope, inclusion: { in: %w[review escalated model_relabel] }
 
   def readonly? = persisted?
 end

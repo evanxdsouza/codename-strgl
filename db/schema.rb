@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_21_064437) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_124833) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -723,6 +723,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_064437) do
     t.index ["user_id"], name: "index_struggle_evidence_reads_on_user_id"
   end
 
+  create_table "struggle_relabel_runs", force: :cascade do |t|
+    t.bigint "struggle_submission_id", null: false
+    t.bigint "requested_by_id", null: false
+    t.text "reason", null: false
+    t.string "status", default: "queued", null: false
+    t.string "provider", null: false
+    t.string "model", null: false
+    t.string "prompt_version", null: false
+    t.string "bundle_digest", null: false
+    t.integer "payload_bytes", null: false
+    t.integer "reserved_cents", null: false
+    t.integer "cost_cents"
+    t.jsonb "proposals"
+    t.text "error"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_struggle_relabel_runs_on_created_at"
+    t.index ["requested_by_id"], name: "index_struggle_relabel_runs_on_requested_by_id"
+    t.index ["struggle_submission_id"], name: "index_struggle_relabel_runs_on_struggle_submission_id"
+  end
+
   create_table "struggle_review_decisions", force: :cascade do |t|
     t.bigint "struggle_submission_id", null: false
     t.bigint "reviewer_id", null: false
@@ -935,6 +957,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_064437) do
   add_foreign_key "struggle_anchors", "users"
   add_foreign_key "struggle_evidence_reads", "struggle_submissions"
   add_foreign_key "struggle_evidence_reads", "users"
+  add_foreign_key "struggle_relabel_runs", "struggle_submissions"
+  add_foreign_key "struggle_relabel_runs", "users", column: "requested_by_id"
   add_foreign_key "struggle_review_decisions", "struggle_submissions"
   add_foreign_key "struggle_review_decisions", "users", column: "reviewer_id"
   add_foreign_key "struggle_submissions", "struggle_submissions", column: "supersedes_id"

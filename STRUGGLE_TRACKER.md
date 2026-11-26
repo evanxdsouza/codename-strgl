@@ -131,6 +131,15 @@ prompts during normal tracking.
   `dslim/distilbert-NER`, is accepted as opt-in although it reaches only
   80% for names and places on the newest held-out set (10 names, 5 places,
   synthetic); the test records that shortfall explicitly.
+- **Model re-check consent (M4, first slice).** The preview has an unticked
+  box, and `bundle`/`preview` take `-allow-model-relabel`, which sets
+  `model_relabel_consent` in the frozen bundle. On the server,
+  `StruggleRelabelRun.request!` records a re-check only for a consented
+  submission awaiting ordinary review (never escalated ones), after checking
+  the minimised payload for leaks and reserving a conservative cost under
+  monthly and per-run caps (`STRGL_RELABEL_*`, both 0 by default, which keeps
+  it off). Each request is logged as a `model_relabel` evidence read.
+  Nothing calls a model yet, and there is no reviewer button.
 
 Not in v1: a stronger-model relabelling run (requesting relabelling returns
 the submission to the user), an on-device NER redaction model, and direct

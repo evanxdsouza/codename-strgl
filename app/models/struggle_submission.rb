@@ -23,6 +23,7 @@ class StruggleSubmission < ApplicationRecord
   has_many :turn_claims, class_name: "StruggleTurnClaim", dependent: :destroy
   has_many :review_decisions, -> { order(:created_at, :id) }, class_name: "StruggleReviewDecision", dependent: :destroy
   has_many :evidence_reads, class_name: "StruggleEvidenceRead", dependent: :destroy
+  has_many :relabel_runs, class_name: "StruggleRelabelRun", dependent: :destroy
   has_one_attached :bundle
 
   validates :status, inclusion: { in: STATUSES }

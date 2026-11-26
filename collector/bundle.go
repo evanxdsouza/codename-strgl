@@ -21,22 +21,26 @@ const BundleSchema = 1
 // it. The preview shows this structure, and the uploaded bytes are the
 // preview's bytes.
 type Bundle struct {
-	Schema           int          `json:"schema"`
-	CollectorVersion string       `json:"collector_version"`
-	DeviceID         string       `json:"device_id"`
-	KeyProtection    string       `json:"key_protection"`
-	RuleSet          string       `json:"rule_set"`
-	RedactionVersion string       `json:"redaction_version"`
-	Project          string       `json:"project"`
-	From             int64        `json:"from"` // milliseconds since the Unix epoch, inclusive
-	To               int64        `json:"to"`   // exclusive
-	CreatedAt        int64        `json:"created_at"`
-	UserContext      string       `json:"user_context"`
-	Supersedes       string       `json:"supersedes,omitempty"` // digest of a submission sent back for relabelling
-	Totals           Totals       `json:"totals"`
-	Turns            []BundleTurn `json:"turns"`
-	Chain            BundleChain  `json:"chain"`
-	Notes            []string     `json:"notes"`
+	Schema           int    `json:"schema"`
+	CollectorVersion string `json:"collector_version"`
+	DeviceID         string `json:"device_id"`
+	KeyProtection    string `json:"key_protection"`
+	RuleSet          string `json:"rule_set"`
+	RedactionVersion string `json:"redaction_version"`
+	Project          string `json:"project"`
+	From             int64  `json:"from"` // milliseconds since the Unix epoch, inclusive
+	To               int64  `json:"to"`   // exclusive
+	CreatedAt        int64  `json:"created_at"`
+	UserContext      string `json:"user_context"`
+	Supersedes       string `json:"supersedes,omitempty"` // digest of a submission sent back for relabelling
+	// ModelRelabelConsent is the user's choice to let a reviewer send this
+	// redacted bundle to an external AI model to re-check the labels. It is
+	// part of the frozen bytes, so the digest covers it.
+	ModelRelabelConsent bool         `json:"model_relabel_consent,omitempty"`
+	Totals              Totals       `json:"totals"`
+	Turns               []BundleTurn `json:"turns"`
+	Chain               BundleChain  `json:"chain"`
+	Notes               []string     `json:"notes"`
 }
 
 // Totals keeps the three numbers apart: the activity estimate, agent-only
@@ -109,9 +113,11 @@ type BuildOptions struct {
 	Exclude     map[string]bool // item IDs
 	UserContext string
 	Supersedes  string
-	Terms       []string   // extra words to redact
-	NER         *NERHelper // optional entity model the user enabled
-	Now         time.Time
+	// AllowModelRelabel sets ModelRelabelConsent; off unless the user ticks it.
+	AllowModelRelabel bool
+	Terms             []string   // extra words to redact
+	NER               *NERHelper // optional entity model the user enabled
+	Now               time.Time
 }
 
 const maxItemText = 8000
@@ -146,7 +152,7 @@ func (s *Store) BuildBundle(opt BuildOptions) (*Bundle, error) {
 		Schema: BundleSchema, CollectorVersion: version, DeviceID: s.DeviceID, KeyProtection: s.KeyProtection,
 		RuleSet: RuleSetVersion, RedactionVersion: r.Version(), Project: opt.Project,
 		From: opt.From.UnixMilli(), To: opt.To.UnixMilli(), CreatedAt: opt.Now.UnixMilli(),
-		UserContext: userContext, Supersedes: opt.Supersedes, Turns: []BundleTurn{},
+		UserContext: userContext, Supersedes: opt.Supersedes, ModelRelabelConsent: opt.AllowModelRelabel, Turns: []BundleTurn{},
 		Notes: []string{
 			"Automated redaction (" + r.Version() + ") replaces common secret formats and contact details with typed placeholders. It is not guaranteed anonymisation.",
 			"Only file changes are observed when no prompt is sent: reading, research and thinking leave no trace the collector sees, and changes by an AI assistant inside an editor look like the person's own.",

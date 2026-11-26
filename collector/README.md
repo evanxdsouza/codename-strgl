@@ -104,7 +104,9 @@ strgl-collector preview -project NAME -from 2026-11-01 -to 2026-11-07
 
 `preview` prints a `http://127.0.0.1:…/?t=…` link that only works on this
 device. Inspect each item, leave items out, add context or words to
-redact, then press Submit; only the bytes shown are uploaded. To answer a
+redact, then press Submit; only the bytes shown are uploaded. The unticked
+box (or `-allow-model-relabel`) lets a reviewer send that redacted bundle to
+an external AI model to re-check the labels; it never changes your hours. To answer a
 relabelling request, run preview again with `-supersedes DIGEST`.
 
 Redaction uses deterministic rules. An optional on-device entity model can

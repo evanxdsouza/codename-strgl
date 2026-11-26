@@ -4,7 +4,7 @@ module StruggleBundleHelper
   T0_MS = Time.utc(2026, 11, 20, 10).to_i * 1000
 
   # turns: [{ id:, start: seconds after T0, value: 0/1, seconds:, interval: seconds }]
-  def struggle_bundle_data(turns:, project: "calcs", device_id: "dev_test", supersedes: nil, chain_start: 1, previous_head: "", context: "")
+  def struggle_bundle_data(turns:, project: "calcs", device_id: "dev_test", supersedes: nil, chain_start: 1, previous_head: "", context: "", consent: false)
     seq = chain_start
     entries = []
     built = turns.map do |turn|
@@ -34,7 +34,7 @@ module StruggleBundleHelper
       "schema" => 1, "collector_version" => "0.1.0", "device_id" => device_id, "key_protection" => "file-0600",
       "rule_set" => "struggle-v1.0", "redaction_version" => "redact-v1.0", "project" => project,
       "from" => T0_MS - 3_600_000, "to" => T0_MS + 86_400_000, "created_at" => T0_MS + 90_000_000,
-      "user_context" => context, "supersedes" => supersedes,
+      "user_context" => context, "supersedes" => supersedes, "model_relabel_consent" => (true if consent),
       "totals" => {
         "estimated_human_seconds" => built.size * 120, "agent_seconds" => 0,
         "proposed_productive_seconds" => built.sum { |t| t["label"]["productive_seconds"] },

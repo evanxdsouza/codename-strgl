@@ -93,6 +93,7 @@ func (s *Store) cleanEvidenceSpool(dir string, now time.Time) {
 type evidenceFlags struct {
 	project, from, to, context, terms, exclude, supersedes, store, ner string
 	retention                                                          time.Duration
+	allowModelRelabel                                                  bool
 }
 
 func parseEvidenceFlags(name string, args []string, home string) (*flag.FlagSet, *evidenceFlags) {
@@ -106,6 +107,7 @@ func parseEvidenceFlags(name string, args []string, home string) (*flag.FlagSet,
 	fs.StringVar(&f.exclude, "exclude", "", "comma-separated evidence item IDs to leave out")
 	fs.StringVar(&f.supersedes, "supersedes", "", "digest of a submission returned for relabelling")
 	fs.StringVar(&f.store, "store", filepath.Join(home, ".strgl", "evidence.db"), "local evidence database")
+	fs.BoolVar(&f.allowModelRelabel, "allow-model-relabel", false, "let a reviewer send this redacted bundle to an external AI model to re-check the labels")
 	fs.StringVar(&f.ner, "ner", os.Getenv("STRGL_NER_HELPER"), "optional entity-model helper command (see collector/ner); if it fails, nothing is built")
 	fs.DurationVar(&f.retention, "retention", 30*24*time.Hour, "keep local evidence content this long")
 	_ = fs.Parse(args)
@@ -127,7 +129,7 @@ func (f *evidenceFlags) options(now time.Time) (BuildOptions, error) {
 	if err != nil {
 		return BuildOptions{}, err
 	}
-	opt := BuildOptions{Project: f.project, From: from, To: to.AddDate(0, 0, 1), UserContext: f.context, Supersedes: f.supersedes, Now: now, Exclude: map[string]bool{}}
+	opt := BuildOptions{Project: f.project, From: from, To: to.AddDate(0, 0, 1), UserContext: f.context, Supersedes: f.supersedes, AllowModelRelabel: f.allowModelRelabel, Now: now, Exclude: map[string]bool{}}
 	for _, id := range strings.Split(f.exclude, ",") {
 		if id = strings.TrimSpace(id); id != "" {
 			opt.Exclude[id] = true

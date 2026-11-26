@@ -36,6 +36,8 @@ func servePreview(store *Store, base BuildOptions, apiURL, apiKey string) error 
 		}
 		if r.Form.Has("context") {
 			opt.UserContext = r.FormValue("context")
+			// The box is in the same form, so an unticked box means no.
+			opt.AllowModelRelabel = r.FormValue("allow_model_relabel") == "1"
 		}
 		if v := r.FormValue("redact"); v != "" {
 			opt.Terms = append(append([]string{}, base.Terms...), strings.Split(v, ",")...)
@@ -62,8 +64,11 @@ func servePreview(store *Store, base BuildOptions, apiURL, apiKey string) error 
 			return
 		}
 		_ = r.ParseForm()
-		if !r.Form.Has("context") && base.UserContext != "" {
+		if !r.Form.Has("context") {
 			r.Form["context"] = []string{base.UserContext}
+			if base.AllowModelRelabel {
+				r.Form["allow_model_relabel"] = []string{"1"}
+			}
 		}
 		b, data, digest, err := build(r)
 		page := previewPage{Token: token, Error: errString(err), Form: r.Form}
@@ -176,6 +181,7 @@ textarea,input[type=text]{width:100%;box-sizing:border-box}
 <p>This page runs on your device. Everything below is the redacted bundle that <b>Submit</b> sends, byte for byte. Raw prompts, outputs and diffs stay in your local evidence store.</p>
 {{if .Error}}<p class="err">{{.Error}}</p>{{end}}
 {{with .Bundle}}
+<p>{{if .ModelRelabelConsent}}You allow a model re-check of the labels.{{else}}No model re-check: reviewers only.{{end}}</p>
 <p>Project <b>{{.Project}}</b>, {{when .From}} to {{when .To}}. Rule set {{.RuleSet}}, redaction {{.RedactionVersion}}, key protection {{.KeyProtection}}.</p>
 <table class="totals">
 <tr><td>Estimated human activity (2-minute rule)</td><td><b>{{hours .Totals.EstimatedHumanSeconds}}</b></td></tr>
@@ -190,6 +196,7 @@ textarea,input[type=text]{width:100%;box-sizing:border-box}
 <input type="hidden" name="t" value="{{.Token}}">
 <h2>Your context for the reviewer</h2>
 <textarea name="context" rows="3">{{first .Form "context"}}</textarea>
+<p><label><input type="checkbox" name="allow_model_relabel" value="1" {{if eq (first .Form "allow_model_relabel") "1"}}checked{{end}}> A reviewer may send this redacted bundle (nothing else) to an external AI model to re-check the labels. It never changes your hours by itself, and escalated cases are never sent.</label></p>
 <p>Extra words to redact (comma-separated, such as your name or school): <input type="text" name="redact" value="{{first .Form "redact"}}"></p>
 {{with .Bundle}}{{range .Turns}}
 <div class="turn l{{.Label.Value}}">

@@ -118,6 +118,16 @@ func TestTimelineTurnsEvidenceAndRedactedBundle(t *testing.T) {
 		t.Fatal("chain segment does not reproduce the head")
 	}
 
+	// Consent to a model re-check is off unless the user gives it, and is
+	// part of the frozen bytes when they do.
+	if bytes.Contains(data, []byte("model_relabel_consent")) {
+		t.Fatal("bundle carries model consent the user did not give")
+	}
+	consented, _ := store.BuildBundle(BuildOptions{Project: "terminet", From: t0.Add(-time.Hour), To: t0.Add(time.Hour), Now: now, UserContext: "I am learning Python", AllowModelRelabel: true})
+	if cdata, cdigest := consented.Encode(); !bytes.Contains(cdata, []byte(`"model_relabel_consent": true`)) && !bytes.Contains(cdata, []byte(`"model_relabel_consent":true`)) || cdigest == digest {
+		t.Fatalf("consent missing from the bundle or not covered by its digest:\n%s", cdata)
+	}
+
 	// Excluding an item leaves only its commitment in the bundle.
 	excluded := b.Turns[0].Items[0].ID
 	b2, _ := store.BuildBundle(BuildOptions{Project: "terminet", From: t0.Add(-time.Hour), To: t0.Add(time.Hour), Now: now, Exclude: map[string]bool{excluded: true}})
