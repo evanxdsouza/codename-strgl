@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 // minGap is the shortest interval between two heartbeats of one session and
 // actor. Human prompts are always sent.
