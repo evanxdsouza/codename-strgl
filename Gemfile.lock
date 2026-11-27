@@ -164,7 +164,7 @@ GEM
       reline (>= 0.3.8)
     diff-lcs (1.6.2)
     domain_name (0.6.20260829)
-    doorkeeper (5.9.9)
+    doorkeeper (5.9.10)
       railties (>= 5)
     dotenv (3.2.0)
     dotenv-rails (3.2.0)
@@ -190,6 +190,7 @@ GEM
       railties (>= 6.1.0)
     faker (3.8.0)
       i18n (>= 1.8.11, < 2)
+    ffi (1.17.4)
     ffi (1.17.4-aarch64-linux-gnu)
     ffi (1.17.4-aarch64-linux-musl)
     ffi (1.17.4-arm-linux-gnu)
@@ -250,7 +251,7 @@ GEM
     jmespath (1.6.2)
     js_from_routes (5.0.0)
       railties (>= 7.2, < 9)
-    json (3.1.0)
+    json (3.2.0)
     json-schema (6.2.0)
       addressable (~> 2.8)
       bigdecimal (>= 3.1, < 5)
@@ -301,6 +302,7 @@ GEM
       mime-types-data (~> 3.2025, >= 3.2025.0507)
     mime-types-data (3.2026.1103)
     mini_mime (1.1.5)
+    mini_portile2 (2.8.9)
     minitest (6.1.0)
       drb (~> 2.0)
       prism (>= 1.5, < 3)
@@ -316,6 +318,9 @@ GEM
     net-smtp (0.5.1)
       net-protocol
     nio4r (2.7.5)
+    nokogiri (1.19.7)
+      mini_portile2 (~> 2.8.2)
+      racc (~> 1.4)
     nokogiri (1.19.7-aarch64-linux-gnu)
       racc (~> 1.4)
     nokogiri (1.19.7-aarch64-linux-musl)
@@ -373,7 +378,7 @@ GEM
       railties (>= 4.2)
     raabro (1.5.0)
     racc (1.8.1)
-    rack (3.2.8)
+    rack (3.2.9)
     rack-attack (6.8.0)
       rack (>= 1.0, < 4)
     rack-cors (3.0.0)
@@ -592,7 +597,7 @@ DEPENDENCIES
   cloudflare-rails
   countries
   debug
-  doorkeeper (~> 5.8)
+  doorkeeper (~> 5.9)
   dotenv-rails
   erb_lint
   factory_bot_rails
