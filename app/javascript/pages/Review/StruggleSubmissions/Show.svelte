@@ -39,6 +39,23 @@
     };
     items: Item[];
   };
+  type RelabelRun = {
+    id: number;
+    status: string;
+    model: string;
+    prompt_version: string;
+    requested_by: string;
+    reason: string;
+    error: string | null;
+    cost_cents: number | null;
+    at: string;
+  };
+  type ModelRelabel = {
+    available: boolean;
+    consent: boolean;
+    proposals: Record<string, { value: number; reason: string }>;
+    runs: RelabelRun[];
+  };
   type Decision = {
     id: number;
     reviewer: string;
@@ -61,6 +78,7 @@
     actions,
     decisions,
     evidence_reads,
+    model_relabel,
     errors = {},
   }: {
     submission: Record<string, any>;
@@ -70,7 +88,8 @@
     actions: string[];
     decisions: Decision[];
     evidence_reads: { user: string; scope: string; at: string }[];
-    errors?: { decision?: string };
+    model_relabel: ModelRelabel;
+    errors?: { decision?: string; relabel?: string };
   } = $props();
 
   let action = $state("");
@@ -180,6 +199,20 @@
             >{/if}
         </div>
         <div>{turn.label.reason}</div>
+        {#if model_relabel.proposals[turn.id]}
+          <div
+            class="mt-1 text-muted {model_relabel.proposals[turn.id].value !==
+            turn.label.value
+              ? 'text-warning'
+              : ''}"
+          >
+            Model second opinion: label {model_relabel.proposals[turn.id]
+              .value}{model_relabel.proposals[turn.id].value !==
+            turn.label.value
+              ? " (differs from the rules)"
+              : ""}. {model_relabel.proposals[turn.id].reason}
+          </div>
+        {/if}
         <div class="text-muted">
           Signals: {turn.label.signals.join(", ") || "none"}. Coverage {turn
             .label.coverage}, ended {turn.end_reason}, {turn.tool_calls} tool calls,
@@ -212,6 +245,47 @@
         </details>
       </div>
     {/each}
+  </div>
+
+  <div class="rounded-2xl border border-surface-200 bg-dark p-6 text-sm">
+    <h2 class="text-lg font-semibold text-surface-content">Model re-check</h2>
+    <p class="mt-1 text-muted">
+      Sends a minimised copy of this redacted bundle to the configured model for
+      a second opinion on the labels. It never changes any hours.
+      {model_relabel.consent
+        ? "The user allowed this."
+        : "The user did not allow this, so it cannot be sent."}
+    </p>
+    {#if errors.relabel}<p class="mt-2 text-error">{errors.relabel}</p>{/if}
+    {#if model_relabel.available}
+      <Form
+        action={reviewStruggleSubmissions.requestModelRelabel.path({
+          id: submission.id,
+        })}
+        method="post"
+        class="mt-4 space-y-4"
+      >
+        <FormField inputId="relabel_reason" label="Why re-check (logged)">
+          <TextInput id="relabel_reason" name="reason" required />
+        </FormField>
+        <Button type="submit" variant="primary">Ask the model</Button>
+      </Form>
+    {/if}
+    {#if model_relabel.runs.length > 0}
+      <ul class="mt-4 space-y-1 text-surface-content">
+        {#each model_relabel.runs as run (run.id)}
+          <li>
+            {run.at.replace("T", " ").slice(0, 16)} UTC, {run.requested_by}:
+            <b>{run.status}</b>, {run.model} ({run.prompt_version}){run.cost_cents !==
+            null
+              ? `, ${run.cost_cents}¢`
+              : ""}.
+            <span class="text-muted">{run.reason}</span>
+            {#if run.error}<span class="text-warning">{run.error}</span>{/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
   </div>
 
   <div class="rounded-2xl border border-surface-200 bg-dark p-6">
@@ -283,9 +357,8 @@
     <p class="mt-4 text-xs text-muted">
       Low effort or unclear evidence is not by itself fraud. Escalate only for
       suspected deliberate deception; a chain mismatch alone is a discrepancy to
-      investigate, not proof. A stronger-model relabelling run is not
-      implemented: "Request relabelling" returns the submission to the user to
-      resubmit.
+      investigate, not proof. "Request relabelling" returns the submission to
+      the user to resubmit; the model re-check above is only a second opinion.
     </p>
   </div>
 

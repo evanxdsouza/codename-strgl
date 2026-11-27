@@ -86,4 +86,26 @@ class Review::StruggleSubmissionsControllerTest < ActionDispatch::IntegrationTes
     assert_response :not_found
     assert_equal "submitted", own.reload.status
   end
+
+  test "a reviewer can queue a model re-check only for a consented submission" do
+    env = { "STRGL_RELABEL_PROVIDER" => "self-hosted", "STRGL_RELABEL_URL" => "http://relabel.test/v1", "STRGL_RELABEL_MODEL" => "small",
+            "STRGL_RELABEL_MONTHLY_RUN_CAP" => "5", "STRGL_RELABEL_INPUT_CENTS_PER_MTOK" => "0", "STRGL_RELABEL_OUTPUT_CENTS_PER_MTOK" => "0" }
+    previous = env.keys.to_h { |key| [ key, ENV[key] ] }
+    ENV.update(env)
+    consented, = StruggleSubmission.receive!(user: @owner, raw: struggle_bundle(turns: [ { id: "c1", start: 900, value: 1, seconds: 120 } ], consent: true))
+    sign_in_as(@reviewer)
+
+    get review_struggle_submission_path(@submission)
+    assert_equal [ false, false ], inertia.props["model_relabel"].values_at("available", "consent")
+    post relabel_runs_review_struggle_submission_path(@submission), params: { reason: "check" }
+    assert_equal 0, StruggleRelabelRun.count
+
+    get review_struggle_submission_path(consented)
+    assert inertia.props["model_relabel"]["available"]
+    post relabel_runs_review_struggle_submission_path(consented), params: { reason: "check" }
+    assert_redirected_to review_struggle_submission_path(consented)
+    assert_equal [ [ consented.id, "queued" ] ], StruggleRelabelRun.pluck(:struggle_submission_id, :status)
+  ensure
+    ENV.update(previous) if previous
+  end
 end

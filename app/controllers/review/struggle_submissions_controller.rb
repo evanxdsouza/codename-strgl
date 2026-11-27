@@ -6,7 +6,7 @@ class Review::StruggleSubmissionsController < InertiaController
   layout "inertia", only: [ :index, :show ]
 
   before_action :require_reviewer
-  before_action :set_submission, only: [ :show, :bundle, :decide ]
+  before_action :set_submission, only: [ :show, :bundle, :decide, :request_model_relabel ]
 
   def index
     scope = StruggleSubmission.live.where.not(user_id: current_user.id).includes(:user).order(created_at: :desc)
@@ -48,6 +48,7 @@ class Review::StruggleSubmissionsController < InertiaController
         to: (@submission.range_end - 1).in_time_zone(@submission.user.timezone).to_date
       ).to_s,
       actions: @submission.allowed_actions_for(current_user),
+      model_relabel: model_relabel_props(bundle),
       decisions: @submission.review_decisions.includes(:reviewer).map { |decision| decision_props(decision) },
       evidence_reads: @submission.evidence_reads.includes(:user).order(created_at: :desc).limit(20).map do |read|
         { user: read.user.display_name, scope: read.scope, at: read.created_at.iso8601 }
@@ -75,7 +76,33 @@ class Review::StruggleSubmissionsController < InertiaController
     redirect_to review_struggle_submission_path(@submission), inertia: { errors: { decision: @submission.errors.full_messages.to_sentence } }
   end
 
+  # Records a model re-check and queues it. It changes no hours.
+  def request_model_relabel
+    StruggleRelabelRun.request!(submission: @submission, requester: current_user, reason: params[:reason])
+    redirect_to review_struggle_submission_path(@submission), notice: "Model re-check queued. It will not change any hours."
+  rescue StruggleRelabelRun::Refused => e
+    redirect_to review_struggle_submission_path(@submission), inertia: { errors: { relabel: e.message } }
+  end
+
   private
+
+  def model_relabel_props(bundle)
+    runs = @submission.relabel_runs.includes(:requested_by).order(created_at: :desc).limit(10)
+    latest = runs.find { |run| run.status == "succeeded" }
+    {
+      available: StruggleRelabelRun::Config.from_env.enabled? && @submission.status == "submitted" &&
+        bundle["model_relabel_consent"] == true,
+      consent: bundle["model_relabel_consent"] == true,
+      proposals: latest&.proposals_by_turn || {},
+      runs: runs.map do |run|
+        {
+          id: run.id, status: run.status, model: run.model, prompt_version: run.prompt_version,
+          requested_by: run.requested_by.display_name, reason: run.reason, error: run.error,
+          cost_cents: run.cost_cents, at: run.created_at.iso8601
+        }
+      end
+    }
+  end
 
   def require_reviewer
     redirect_to root_path, alert: "You are not authorized to access this page." unless current_user&.can_review_struggle?

@@ -5,7 +5,8 @@ class StruggleRelabelRunTest < ActiveSupport::TestCase
   include StruggleBundleHelper
 
   CONFIG = StruggleRelabelRun::Config.new(
-    provider: "test", model: "test-model", monthly_cap_cents: 1_000, run_cap_cents: 100,
+    provider: "test", url: "http://relabel.test/v1", api_key: "", model: "test-model", monthly_run_cap: 100,
+    monthly_cap_cents: 1_000, run_cap_cents: 100,
     input_cents_per_mtok: 300, output_cents_per_mtok: 1_500, max_output_tokens: 4_000
   )
 
@@ -79,15 +80,15 @@ class StruggleRelabelRunTest < ActiveSupport::TestCase
     assert_equal 1 + second.reserved_cents, StruggleRelabelRun.month_spend_cents
   end
 
-  test "the payload keeps labels and redacted text but no identifiers" do
+  test "the payload keeps redacted text but no identifiers or rule labels" do
     data = struggle_bundle_data(turns: [ { id: "turn-a", start: 0, value: 1, seconds: 120 }, { id: "turn-b", start: 300, value: 0, seconds: 0 } ], project: "secret-project", device_id: "dev_42", consent: true)
     data["turns"][1]["items"][0].merge!("status" => "excluded", "text" => nil)
     payload = StruggleRelabelPayload.new(data, prompt_version: "p1")
     json = payload.to_json
 
-    %w[secret-project dev_42 turn-a turn-b abc commitment chain_seq main].each { |hidden| assert_not_includes json, hidden }
+    %w[secret-project dev_42 turn-a turn-b abc commitment chain_seq main label diagnosis].each { |hidden| assert_not_includes json, hidden }
     parsed = JSON.parse(json)
-    assert_equal [ [ "t1", 0, 1 ], [ "t2", 300, 0 ] ], parsed["turns"].map { |t| [ t["ref"], t["seconds_from_start"] - 3600, t["label"]["value"] ] }
+    assert_equal [ [ "t1", 0 ], [ "t2", 300 ] ], parsed["turns"].map { |t| [ t["ref"], t["seconds_from_start"] - 3600 ] }
     assert_equal [ 1, 0 ], parsed["turns"].map { |t| t["items"].size }
     assert_equal({ "t1" => "turn-a", "t2" => "turn-b" }, payload.turn_ids)
   end

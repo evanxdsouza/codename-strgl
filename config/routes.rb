@@ -165,6 +165,7 @@ Rails.application.routes.draw do
       member do
         get :bundle
         post :decisions, action: :decide
+        post :relabel_runs, action: :request_model_relabel
       end
     end
   end

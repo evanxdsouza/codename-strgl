@@ -131,15 +131,48 @@ prompts during normal tracking.
   `dslim/distilbert-NER`, is accepted as opt-in although it reaches only
   80% for names and places on the newest held-out set (10 names, 5 places,
   synthetic); the test records that shortfall explicitly.
-- **Model re-check consent (M4, first slice).** The preview has an unticked
-  box, and `bundle`/`preview` take `-allow-model-relabel`, which sets
-  `model_relabel_consent` in the frozen bundle. On the server,
-  `StruggleRelabelRun.request!` records a re-check only for a consented
-  submission awaiting ordinary review (never escalated ones), after checking
-  the minimised payload for leaks and reserving a conservative cost under
-  monthly and per-run caps (`STRGL_RELABEL_*`, both 0 by default, which keeps
-  it off). Each request is logged as a `model_relabel` evidence read.
-  Nothing calls a model yet, and there is no reviewer button.
+- **Model re-check (M4).** The preview has an unticked box, and
+  `bundle`/`preview` take `-allow-model-relabel`, which sets
+  `model_relabel_consent` in the frozen bundle. On a consented submission
+  awaiting ordinary review (never an escalated one), a reviewer can press
+  "Ask the model". The server sends a minimised copy of the redacted bundle,
+  with no project, device, turn IDs, times or rule labels, after checking it
+  again for leaks. The model labels each turn blind; its labels appear beside
+  the rule labels as a second opinion and never change estimated, proposed,
+  claimable or approved time. Every request is logged as a `model_relabel`
+  evidence read.
+
+### Self-hosting the re-check model
+
+Any OpenAI-compatible endpoint works, but the intended setup is a small
+model on your own server, so the payload never leaves it. Tested with
+llama.cpp's `llama-server` and `Qwen2.5-3B-Instruct` (Q4_K_M, about 2 GB):
+
+```sh
+llama-server -m qwen2.5-3b-instruct-q4_k_m.gguf --host 127.0.0.1 --port 8091 -c 8192 --alias qwen2.5-3b
+```
+
+```env
+STRGL_RELABEL_PROVIDER=self-hosted
+STRGL_RELABEL_URL=http://127.0.0.1:8091/v1
+STRGL_RELABEL_MODEL=qwen2.5-3b
+STRGL_RELABEL_MONTHLY_RUN_CAP=200
+STRGL_RELABEL_INPUT_CENTS_PER_MTOK=0
+STRGL_RELABEL_OUTPUT_CENTS_PER_MTOK=0
+STRGL_RELABEL_MAX_OUTPUT_TOKENS=800
+```
+
+With both prices 0 the run cap is the only limit. For a hosted provider set
+its prices, `STRGL_RELABEL_MONTHLY_CAP_CENTS`, `STRGL_RELABEL_RUN_CAP_CENTS`
+and `STRGL_RELABEL_API_KEY`, and use an account that neither retains nor
+trains on the data. Unset or zero caps keep the feature off. The answer is
+constrained by a JSON schema with one entry per turn, which llama.cpp
+enforces as a grammar.
+
+On 4 ARM cores the 3B model took about 40 seconds for a 10-turn bundle and
+used about 4 GB of RAM. It agreed with hand labels on 10 of 10 short
+synthetic turns; the 1.5B model labelled every turn 0. That is a smoke
+check, not a validation.
 
 Not in v1: a stronger-model relabelling run (requesting relabelling returns
 the submission to the user), an on-device NER redaction model, and direct

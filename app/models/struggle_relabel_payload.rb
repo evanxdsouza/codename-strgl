@@ -1,6 +1,8 @@
 # What a model relabelling run may send: a further-minimised copy of a frozen,
-# already redacted submission bundle. It keeps per-turn labels, reasons,
-# signals and the included items' redacted text, command and exit code. It
+# already redacted submission bundle. It keeps the included items' redacted
+# text, command and exit code. The rule labels, reasons and signals are left
+# out, so the model's opinion is independent of them (a small model copies a
+# label it can see). It
 # drops the device ID, session hashes, commitments, chain, branch, project
 # name, file names and absolute times, and leaves out excluded, withheld and
 # purged items entirely. Turns are renamed t1, t2, ... so turn IDs stay here.
@@ -50,13 +52,11 @@ class StruggleRelabelPayload
       "turns" => @data["turns"].each_with_index.map do |turn, index|
         ref = "t#{index + 1}"
         @turn_ids[ref] = turn["id"]
-        label = turn["label"]
         {
           "ref" => ref,
           "seconds_from_start" => (turn["started_at"] - from) / 1000,
           "end_reason" => turn["end_reason"],
           "tool_calls" => turn["tool_calls"],
-          "label" => label.slice("value", "reason", "signals", "coverage", "needs_review"),
           "items" => Array(turn["items"]).select { |item| item["status"] == "included" }.map do |item|
             item.slice("kind", "text", "command", "exit", "is_error").compact
           end
