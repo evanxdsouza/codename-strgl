@@ -23,11 +23,14 @@ class StruggleRelabelJobTest < ActiveSupport::TestCase
 
   teardown { ENV.update(@previous) }
 
-  def answer(turns)
-    stub_request(:post, "#{URL}/chat/completions").to_return(
-      headers: { "Content-Type" => "application/json" },
-      body: JSON.generate(choices: [ { message: { content: JSON.generate(turns:) } } ], usage: { prompt_tokens: 900, completion_tokens: 40 })
-    )
+  # Answers each request with the given labels for the turns it carries.
+  def answer(labels)
+    stub_request(:post, "#{URL}/chat/completions").to_return do |req|
+      refs = JSON.parse(JSON.parse(req.body)["messages"][1]["content"])["turns"].map { |turn| turn["ref"] }
+      turns = labels.select { |turn| refs.include?(turn[:ref]) }
+      { headers: { "Content-Type" => "application/json" },
+        body: JSON.generate(choices: [ { message: { content: JSON.generate(turns:) } } ], usage: { prompt_tokens: 900, completion_tokens: 40 }) }
+    end
   end
 
   def request_run
@@ -46,9 +49,10 @@ class StruggleRelabelJobTest < ActiveSupport::TestCase
     run.reload
     assert_equal [ "succeeded", 0 ], [ run.status, run.cost_cents ]
     assert_equal({ "turn-a" => 1, "turn-b" => 1 }, run.proposals_by_turn.transform_values { |p| p["value"] })
-    assert_requested(:post, "#{URL}/chat/completions", times: 1) do |req|
+    # One turn per request, so a small model cannot drift across the list.
+    assert_requested(:post, "#{URL}/chat/completions", times: 2) do |req|
       user = JSON.parse(req.body)["messages"][1]["content"]
-      %w[turn-a turn-b calcs dev_test].none? { |hidden| user.include?(hidden) }
+      JSON.parse(user)["turns"].size == 1 && %w[turn-a turn-b calcs dev_test].none? { |hidden| user.include?(hidden) }
     end
     assert_equal hours, @submission.reload.attributes.slice(*hours.keys)
   end

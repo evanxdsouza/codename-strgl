@@ -33,7 +33,8 @@ class StruggleRelabelRunTest < ActiveSupport::TestCase
     run = request(submission)
 
     assert_equal [ "queued", "test-model", StruggleRelabelRun::PROMPT_VERSION, submission.digest ], [ run.status, run.model, run.prompt_version, run.bundle_digest ]
-    assert_equal CONFIG.estimate_cents(run.payload_bytes), run.reserved_cents
+    request_bytes = StruggleRelabelPayload.new(JSON.parse(submission.bundle.download), prompt_version: run.prompt_version).requests.values.map(&:bytesize)
+    assert_equal CONFIG.estimate_cents(request_bytes), run.reserved_cents
     assert run.reserved_cents.positive?
     assert_equal [ [ @reviewer.id, "model_relabel" ] ], submission.evidence_reads.pluck(:user_id, :scope)
     assert_equal before, submission.reload.attributes.slice(*before.keys)

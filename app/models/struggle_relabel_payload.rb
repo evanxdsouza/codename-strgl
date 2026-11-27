@@ -40,6 +40,16 @@ class StruggleRelabelPayload
     end
   end
 
+  # The requests actually sent: the shared fields with one turn each, because
+  # with the whole list small models drift towards one label for every later
+  # turn. Each is a subset of the leak-checked to_json.
+  def requests
+    @requests ||= begin
+      full = JSON.parse(to_json)
+      full["turns"].to_h { |turn| [ turn["ref"], JSON.generate(full.merge("turns" => [ turn ])) ] }
+    end
+  end
+
   private
 
   def build

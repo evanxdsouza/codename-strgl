@@ -29,11 +29,16 @@ class StruggleRelabelJob < ApplicationJob
     end
 
     payload = StruggleRelabelPayload.new(JSON.parse(raw), prompt_version: run.prompt_version)
-    result = StruggleRelabelClient.new(url: config.url, model: run.model, api_key: config.api_key)
-      .complete(system: SYSTEM_PROMPT, user: payload.to_json, max_tokens: config.max_output_tokens, schema: answer_schema(payload.turn_ids.keys))
-    cost = config.cost_cents(result.input_tokens, result.output_tokens)
-    proposals = parse_proposals(result.content, payload.turn_ids)
-    return fail_run(run, "the model's answer did not label every turn exactly once", cost:) unless proposals
+    client = StruggleRelabelClient.new(url: config.url, model: run.model, api_key: config.api_key)
+    input_tokens = output_tokens = 0
+    proposals = payload.requests.map do |ref, user|
+      result = client.complete(system: SYSTEM_PROMPT, user:, max_tokens: config.max_output_tokens, schema: answer_schema([ ref ]))
+      input_tokens += result.input_tokens.to_i
+      output_tokens += result.output_tokens.to_i
+      parse_proposals(result.content, payload.turn_ids.slice(ref))&.first
+    end
+    cost = config.cost_cents(input_tokens, output_tokens)
+    return fail_run(run, "the model's answer did not label every turn exactly once", cost:) unless proposals.all?
 
     run.update!(status: "succeeded", proposals:, cost_cents: cost, finished_at: Time.current)
   rescue StruggleRelabelClient::Error, StruggleRelabelPayload::Leak => e
@@ -42,8 +47,9 @@ class StruggleRelabelJob < ApplicationJob
 
   private
 
-  # One entry per turn, in order, so a small model cannot skip or repeat one.
-  # The answer is still checked in parse_proposals for servers that ignore it.
+  # Exactly the requested turns, in order, so a small model cannot skip or
+  # repeat one. The answer is still checked in parse_proposals for servers
+  # that ignore it.
   def answer_schema(refs)
     turn = ->(ref) do
       { type: "object", required: %w[ref value reason],

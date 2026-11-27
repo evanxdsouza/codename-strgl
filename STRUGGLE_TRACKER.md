@@ -146,33 +146,45 @@ prompts during normal tracking.
 
 Any OpenAI-compatible endpoint works, but the intended setup is a small
 model on your own server, so the payload never leaves it. Tested with
-llama.cpp's `llama-server` and `Qwen2.5-3B-Instruct` (Q4_K_M, about 2 GB):
+llama.cpp's `llama-server` and `Qwen2.5-1.5B-Instruct` (Q4_K_M, about
+1.1 GB on disk and 2.2 GB of RAM):
 
 ```sh
-llama-server -m qwen2.5-3b-instruct-q4_k_m.gguf --host 127.0.0.1 --port 8091 -c 8192 --alias qwen2.5-3b
+llama-server -m qwen2.5-1.5b-instruct-q4_k_m.gguf --host 127.0.0.1 --port 8091 -c 8192 --alias qwen2.5-1.5b
 ```
 
 ```env
 STRGL_RELABEL_PROVIDER=self-hosted
 STRGL_RELABEL_URL=http://127.0.0.1:8091/v1
-STRGL_RELABEL_MODEL=qwen2.5-3b
+STRGL_RELABEL_MODEL=qwen2.5-1.5b
 STRGL_RELABEL_MONTHLY_RUN_CAP=200
 STRGL_RELABEL_INPUT_CENTS_PER_MTOK=0
 STRGL_RELABEL_OUTPUT_CENTS_PER_MTOK=0
-STRGL_RELABEL_MAX_OUTPUT_TOKENS=800
+STRGL_RELABEL_MAX_OUTPUT_TOKENS=200
 ```
 
 With both prices 0 the run cap is the only limit. For a hosted provider set
 its prices, `STRGL_RELABEL_MONTHLY_CAP_CENTS`, `STRGL_RELABEL_RUN_CAP_CENTS`
 and `STRGL_RELABEL_API_KEY`, and use an account that neither retains nor
 trains on the data. Unset or zero caps keep the feature off. The answer is
-constrained by a JSON schema with one entry per turn, which llama.cpp
-enforces as a grammar.
+constrained by a JSON schema, which llama.cpp enforces as a grammar. Each
+turn is sent as its own request (`STRGL_RELABEL_MAX_OUTPUT_TOKENS` is per
+turn), because with the whole list small models drifted towards giving
+every later turn the same label.
 
-On 4 ARM cores the 3B model took about 40 seconds for a 10-turn bundle and
-used about 4 GB of RAM. It agreed with hand labels on 10 of 10 short
-synthetic turns; the 1.5B model labelled every turn 0. That is a smoke
-check, not a validation.
+Agreement with hand labels on 20 short synthetic turns (two sets of 10,
+one turn per request, 4 ARM cores):
+
+| Model (Q4_K_M) | Agreed | RAM | Time per turn |
+| --- | --- | --- | --- |
+| Qwen2.5-3B-Instruct | 18 of 20 | about 4.1 GB | about 5 s |
+| Qwen2.5-1.5B-Instruct | 16 to 17 of 20 | about 2.2 GB | about 2.5 s |
+
+The 1.5B model is the default because it needs half the RAM; its misses
+were short diagnoses such as "no, off by one", labelled 0, so it can
+under-credit a terse student. Use the 3B model where 4 GB of RAM is free. Qwen3 0.6B and 1.7B, Gemma 3 1B,
+Llama 3.2 1B and Granite 4.0 1B scored 7 of 10 or less on the first set.
+This is a smoke check, not a validation.
 
 Not in v1: a stronger-model relabelling run (requesting relabelling returns
 the submission to the user), an on-device NER redaction model, and direct

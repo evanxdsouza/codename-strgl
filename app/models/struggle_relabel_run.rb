@@ -15,9 +15,9 @@
 class StruggleRelabelRun < ApplicationRecord
   class Refused < StandardError; end
 
-  PROMPT_VERSION = "relabel-v0.3"
+  PROMPT_VERSION = "relabel-v0.4"
   STATUSES = %w[queued running succeeded failed].freeze
-  # Instructions and a JSON frame added around the payload, in tokens.
+  # Instructions and a JSON frame added around each request, in tokens.
   PROMPT_OVERHEAD_TOKENS = 1_500
   LOCK_KEY = 0x5354_524c # "STRL" in ASCII
 
@@ -34,7 +34,7 @@ class StruggleRelabelRun < ApplicationRecord
         monthly_cap_cents: env["STRGL_RELABEL_MONTHLY_CAP_CENTS"].to_i, run_cap_cents: env["STRGL_RELABEL_RUN_CAP_CENTS"].to_i,
         input_cents_per_mtok: env["STRGL_RELABEL_INPUT_CENTS_PER_MTOK"].to_i,
         output_cents_per_mtok: env["STRGL_RELABEL_OUTPUT_CENTS_PER_MTOK"].to_i,
-        max_output_tokens: (env["STRGL_RELABEL_MAX_OUTPUT_TOKENS"].presence || 4_000).to_i
+        max_output_tokens: (env["STRGL_RELABEL_MAX_OUTPUT_TOKENS"].presence || 300).to_i
       )
     end
 
@@ -47,10 +47,12 @@ class StruggleRelabelRun < ApplicationRecord
       ((input_tokens.to_i * input_cents_per_mtok + output_tokens.to_i * output_cents_per_mtok) / 1_000_000.0).ceil
     end
 
-    # Bytes over 3 is a generous token count for redacted English and code.
-    def estimate_cents(payload_bytes)
-      input_tokens = (payload_bytes / 3.0).ceil + PROMPT_OVERHEAD_TOKENS
-      ((input_tokens * input_cents_per_mtok + max_output_tokens * output_cents_per_mtok) / 1_000_000.0).ceil
+    # One request per turn. Bytes over 3 is a generous token count for
+    # redacted English and code, and each request may use max_output_tokens.
+    def estimate_cents(request_bytes)
+      input_tokens = request_bytes.sum { |bytes| (bytes / 3.0).ceil + PROMPT_OVERHEAD_TOKENS }
+      output_tokens = request_bytes.size * max_output_tokens
+      ((input_tokens * input_cents_per_mtok + output_tokens * output_cents_per_mtok) / 1_000_000.0).ceil
     end
   end
 
@@ -83,11 +85,11 @@ class StruggleRelabelRun < ApplicationRecord
 
     payload = StruggleRelabelPayload.new(data, prompt_version: PROMPT_VERSION)
     begin
-      bytes = payload.to_json.bytesize
+      request_bytes = payload.requests.values.map(&:bytesize)
     rescue StruggleRelabelPayload::Leak => e
       raise Refused, "#{e.message}; nothing was sent"
     end
-    estimate = config.estimate_cents(bytes)
+    estimate = config.estimate_cents(request_bytes)
     if !config.self_hosted? && estimate > config.run_cap_cents
       raise Refused, "this run could cost up to #{estimate}¢, over the #{config.run_cap_cents}¢ per-run cap"
     end
@@ -106,7 +108,7 @@ class StruggleRelabelRun < ApplicationRecord
       create!(
         struggle_submission: submission, requested_by: requester, reason: reason.strip,
         provider: config.provider, model: config.model, prompt_version: PROMPT_VERSION,
-        bundle_digest: submission.digest, payload_bytes: bytes, reserved_cents: estimate
+        bundle_digest: submission.digest, payload_bytes: request_bytes.sum, reserved_cents: estimate
       )
     end
     # Enqueued after commit, so the job never sees an uncommitted run.
